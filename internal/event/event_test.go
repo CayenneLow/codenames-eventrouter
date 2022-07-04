@@ -37,7 +37,8 @@ func TestFromJson(t *testing.T) {
 			},
 		}
 
-		actual := FromJSON([]byte(eventJson))
+		actual, err := FromJSON([]byte(eventJson))
+		assert.NoError(t, err)
 
 		assert.Equal(t, expected, actual)
 	})

@@ -16,8 +16,10 @@ type Event struct {
 	Payload   Payload `json:"payload"`
 }
 
-func FromJSON(j []byte) Event {
+func FromJSON(j []byte) (Event, error) {
 	var event Event
-	json.Unmarshal(j, &event)
-	return event
+	if err := json.Unmarshal(j, &event); err != nil {
+		return event, err
+	}
+	return event, nil
 }

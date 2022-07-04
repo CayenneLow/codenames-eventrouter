@@ -40,7 +40,11 @@ func (s *Server) subscribe(w http.ResponseWriter, r *http.Request) {
 			log.Error(err)
 			break
 		}
-		event := event.FromJSON(message)
+		event, err := event.FromJSON(message)
+		if err != nil {
+			log.Error(err)
+			break
+		}
 		s.eventRouter.HandleEvent(c, event)
 	}
 }
