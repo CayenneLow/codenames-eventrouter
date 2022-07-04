@@ -32,14 +32,7 @@ func (m *MockHost) GetType() client.ClientType { return client.Host }
 func (m *MockHost) GetConn() *websocket.Conn   { return &websocket.Conn{} }
 
 func TestForwarding(t *testing.T) {
-	cfg := config.Config{
-		ForwardingRules: map[string]map[string][]string{
-			"newGame": {
-				"receivers":     []string{"server"},
-				"acknowledgers": []string{"host"},
-			},
-		},
-	}
+	cfg := initConfig()
 	eventRouter := NewEventRouter(cfg)
 	mockServer := MockServer{}
 	eventRouter.AddClient(client.Server, &mockServer)
@@ -72,4 +65,24 @@ func TestForwarding(t *testing.T) {
 		eventRouter.HandleEvent(&websocket.Conn{}, mockAckEvent)
 		assert.True(t, emittedHost)
 	})
+}
+
+func TestAddClient(t *testing.T) {
+	cfg := initConfig()
+	eventRouter := NewEventRouter(cfg)
+	mockHost := MockHost{}
+	eventRouter.AddClient(client.Host, &mockHost)
+
+	assert.Equal(t, &mockHost, eventRouter.clients[client.Host])
+}
+
+func initConfig() config.Config {
+	return config.Config{
+		ForwardingRules: map[string]map[string][]string{
+			"newGame": {
+				"receivers":     []string{"server"},
+				"acknowledgers": []string{"host"},
+			},
+		},
+	}
 }
