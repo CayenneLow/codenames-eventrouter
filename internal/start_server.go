@@ -1,6 +1,7 @@
-package eventrouter
+package internal
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
@@ -18,6 +19,7 @@ type Server struct {
 }
 
 func StartServer() {
+	log.Info("Starting Server")
 	cfg := config.Init()
 	eventRouter := eventrouter.NewEventRouter(cfg)
 	server := Server{
@@ -26,6 +28,9 @@ func StartServer() {
 	}
 
 	http.HandleFunc("/subscribe", server.subscribe)
+	wsEndpoint := fmt.Sprintf("%s:%s", cfg.WsHost, cfg.WsPort)
+	log.Infof("Listening on: %s", wsEndpoint)
+	log.Fatal(http.ListenAndServe(wsEndpoint, nil))
 }
 
 func (s *Server) subscribe(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +41,7 @@ func (s *Server) subscribe(w http.ResponseWriter, r *http.Request) {
 	defer c.Close()
 	for {
 		_, message, err := c.ReadMessage()
+		log.Debugf("Received message: %s", message)
 		if err != nil {
 			log.Error(err)
 			break

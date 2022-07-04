@@ -46,6 +46,7 @@ func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 			Ws: conn,
 		}
 		er.AddClient(client.GetClientType(clientType), cl)
+		log.Debugf("Adding %s to clients. Clients: %v", conn.RemoteAddr(), er.clients)
 	} else {
 		if event.Payload.Status == "" {
 			// initiator message

@@ -3,22 +3,19 @@ package logger
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
+	logger "github.com/sirupsen/logrus"
 )
 
-var logger = logrus.New()
-
 func Init() {
-	logger.Out = os.Stdout
-	logger.SetLevel(logrus.DebugLevel)
-	logger.SetFormatter(&logrus.TextFormatter{
+	logger.SetOutput(os.Stdout)
+	logger.SetLevel(logger.DebugLevel)
+	logger.SetFormatter(&logger.TextFormatter{
 		DisableQuote: true,
 	})
 	logger.Info("Logger Initialized")
 }
 
 func Debug(args ...interface{}) {
-	logger.Out = os.Stdout
 	logger.Debug(args...)
 }
 
