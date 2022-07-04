@@ -1,5 +1,0 @@
-package eventrouter
-
-func StartServer() {
-
-}

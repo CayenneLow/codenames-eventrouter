@@ -6,6 +6,7 @@ import (
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,15 +15,21 @@ type MockHost struct{}
 
 var emittedServer = false
 
-func (m *MockServer) EmitEvent(event event.Event) {
+func (m *MockServer) EmitEvent(event event.Event) error {
 	emittedServer = true
+	return nil
 }
+func (m *MockServer) GetType() client.ClientType { return client.Server }
+func (m *MockServer) GetConn() *websocket.Conn   { return &websocket.Conn{} }
 
 var emittedHost = false
 
-func (m *MockHost) EmitEvent(event event.Event) {
+func (m *MockHost) EmitEvent(event event.Event) error {
 	emittedHost = true
+	return nil
 }
+func (m *MockHost) GetType() client.ClientType { return client.Host }
+func (m *MockHost) GetConn() *websocket.Conn   { return &websocket.Conn{} }
 
 func TestForwarding(t *testing.T) {
 	cfg := config.Config{
@@ -48,7 +55,7 @@ func TestForwarding(t *testing.T) {
 				Message: "Test",
 			},
 		}
-		eventRouter.HandleEvent(mockEvent)
+		eventRouter.HandleEvent(&websocket.Conn{}, mockEvent)
 		assert.True(t, emittedServer)
 	})
 
@@ -62,7 +69,7 @@ func TestForwarding(t *testing.T) {
 				Message: "Test",
 			},
 		}
-		eventRouter.HandleEvent(mockAckEvent)
+		eventRouter.HandleEvent(&websocket.Conn{}, mockAckEvent)
 		assert.True(t, emittedHost)
 	})
 }

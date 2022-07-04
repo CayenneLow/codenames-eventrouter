@@ -11,7 +11,8 @@ import (
 type ClientType int
 
 type Client struct {
-	ws websocket.Conn
+	Type ClientType
+	Ws   *websocket.Conn
 }
 
 const (
@@ -52,8 +53,16 @@ func (c *Client) EmitEvent(event event.Event) error {
 	if err != nil {
 		return errors.Wrap(err, "Error marshalling event")
 	}
-	if err := c.ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
+	if err := c.Ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
 		return errors.Wrap(err, "Error writing message to websocket")
 	}
 	return nil
+}
+
+func (c *Client) GetType() ClientType {
+	return c.Type
+}
+
+func (c *Client) GetConn() *websocket.Conn {
+	return c.Ws
 }
