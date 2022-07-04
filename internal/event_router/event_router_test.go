@@ -69,11 +69,38 @@ func TestForwarding(t *testing.T) {
 
 func TestAddClient(t *testing.T) {
 	cfg := initConfig()
-	eventRouter := NewEventRouter(cfg)
-	mockHost := MockHost{}
-	eventRouter.AddClient(client.Host, &mockHost)
+	t.Run("Test add client with no conflict", func(t *testing.T) {
+		eventRouter := NewEventRouter(cfg)
+		mockHost := MockHost{}
+		eventRouter.AddClient(client.Host, &mockHost)
 
-	assert.Equal(t, &mockHost, eventRouter.clients[client.Host])
+		assert.Len(t, eventRouter.clients[client.Host], 1)
+		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
+	})
+
+	t.Run("Test appending client", func(t *testing.T) {
+		eventRouter := NewEventRouter(cfg)
+		mockHost := MockHost{}
+		eventRouter.AddClient(client.Host, &mockHost)
+		eventRouter.AddClient(client.Host, &mockHost)
+
+		assert.Len(t, eventRouter.clients[client.Host], 2)
+		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
+		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][1])
+	})
+
+	t.Run("Test adding different types of clients", func(t *testing.T) {
+		eventRouter := NewEventRouter(cfg)
+		mockHost := MockHost{}
+		eventRouter.AddClient(client.Host, &mockHost)
+		mockServer := MockServer{}
+		eventRouter.AddClient(client.Server, &mockServer)
+
+		assert.Len(t, eventRouter.clients[client.Host], 1)
+		assert.Len(t, eventRouter.clients[client.Server], 1)
+		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
+		assert.Equal(t, &mockServer, eventRouter.clients[client.Server][0])
+	})
 }
 
 func initConfig() config.Config {

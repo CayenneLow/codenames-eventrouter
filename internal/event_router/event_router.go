@@ -20,19 +20,19 @@ type Client interface {
 
 type EventRouter struct {
 	config  config.Config
-	clients map[client.ClientType](Client)
+	clients map[client.ClientType]([]Client)
 }
 
 func NewEventRouter(config config.Config) EventRouter {
 	eventRouter := EventRouter{
 		config:  config,
-		clients: map[client.ClientType]Client{},
+		clients: map[client.ClientType][]Client{},
 	}
 	return eventRouter
 }
 
 func (er *EventRouter) AddClient(clientType client.ClientType, cl Client) {
-	er.clients[clientType] = cl
+	er.clients[clientType] = append(er.clients[clientType], cl)
 }
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
@@ -56,13 +56,13 @@ func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 			// initiator message
 			receivers := er.config.GetReceivers(eventType)
 			for _, r := range receivers {
-				recipients = append(recipients, er.clients[client.GetClientType(r)])
+				recipients = er.clients[client.GetClientType(r)]
 			}
 		} else {
 			// acknowledge mesasge
 			acknowledgers := er.config.GetAcknowledgers(eventType)
 			for _, a := range acknowledgers {
-				recipients = append(recipients, er.clients[client.GetClientType(a)])
+				recipients = er.clients[client.GetClientType(a)]
 			}
 		}
 		for _, r := range recipients {
