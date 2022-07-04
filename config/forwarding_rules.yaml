@@ -1,0 +1,70 @@
+forwarding_rules:
+  newGame: # Event name
+    receivers: # Consumers of the event
+    - server
+    acknowledgers: # Consumers that care about acknowledgements
+    - host
+  joinGame:
+    receivers:
+    - server
+    acknowledgers:
+    - host
+    - spymaster
+  sufficientSpyMasters:
+    receivers:
+    - server
+    acknowledgers: []
+  startGame:
+    receivers:
+    - server
+    acknowledgers:
+    - host
+    - spymaster
+  clue:
+    receivers:
+    - server
+    acknowledgers:
+    - host
+    - spymaster
+  guess:
+    receivers:
+    - server
+    acknowledgers:
+    - host
+    - spymaster
+  gameStateUpdate:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []
+  skipGuess:
+    receivers:
+    - server
+    acknowledgers:
+    - host
+    - spymaster
+  gameOver:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []
+  turnHistoryUpdate:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []
+  turnHistorySnapshot:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []
+  pauseGame:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []
+  resumeGame:
+    receivers:
+    - host
+    - spymaster
+    acknowledgers: []

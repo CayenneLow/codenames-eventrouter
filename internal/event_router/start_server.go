@@ -1,0 +1,5 @@
+package eventrouter
+
+func StartServer() {
+
+}
