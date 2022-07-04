@@ -5,15 +5,15 @@ import (
 )
 
 type Payload struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Status  string                 `json:"status"`
+	Message map[string]interface{} `json:"message"`
 }
 
 type Event struct {
-	Type      string `json:"type"`
-	GameID    string `json:"gameID"`
-	Timestamp uint64 `json:"timestamp"`
-	Payload   Payload
+	Type      string  `json:"type"`
+	GameID    string  `json:"gameID"`
+	Timestamp uint64  `json:"timestamp"`
+	Payload   Payload `json:"payload"`
 }
 
 func FromJSON(j []byte) Event {

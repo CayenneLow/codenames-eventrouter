@@ -44,8 +44,10 @@ func TestForwarding(t *testing.T) {
 			GameID:    "test",
 			Timestamp: 111111,
 			Payload: event.Payload{
-				Status:  "",
-				Message: "Test",
+				Status: "",
+				Message: map[string](interface{}){
+					"Test": "Test",
+				},
 			},
 		}
 		eventRouter.HandleEvent(&websocket.Conn{}, mockEvent)
@@ -58,8 +60,10 @@ func TestForwarding(t *testing.T) {
 			GameID:    "test",
 			Timestamp: 111111,
 			Payload: event.Payload{
-				Status:  "Success",
-				Message: "Test",
+				Status: "Success",
+				Message: map[string](interface{}){
+					"Test": "Test",
+				},
 			},
 		}
 		eventRouter.HandleEvent(&websocket.Conn{}, mockAckEvent)

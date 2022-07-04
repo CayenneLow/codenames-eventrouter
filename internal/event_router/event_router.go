@@ -1,7 +1,6 @@
 package eventrouter
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
@@ -39,12 +38,8 @@ func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 	eventType := event.Type
 	var recipients []Client
 	if eventType == "startConn" {
-		var msg map[string]interface{}
-		if err := json.Unmarshal([]byte(event.Payload.Message), &msg); err != nil {
-			log.Error(err)
-		}
 		var clientType string
-		if n, ok := msg["clientType"].(string); ok {
+		if n, ok := event.Payload.Message["clientType"].(string); ok {
 			clientType = string(n)
 		}
 		cl := &client.Client{
