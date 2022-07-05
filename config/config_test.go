@@ -10,7 +10,7 @@ import (
 
 func TestInit(t *testing.T) {
 	cfg := Init()
-	f, err := os.Open("./forwarding_rules.yaml")
+	f, err := os.Open(cfg.ForwardingRulesPath)
 	assert.NoError(t, err)
 	var bytes []byte
 	_, err = f.Read(bytes)
