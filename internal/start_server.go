@@ -18,22 +18,21 @@ type Server struct {
 	eventRouter eventrouter.EventRouter
 }
 
-func StartServer() {
+func StartServer(cfg config.Config) {
 	log.Info("Starting Server")
-	cfg := config.Init()
 	eventRouter := eventrouter.NewEventRouter(cfg)
 	server := Server{
 		config:      cfg,
 		eventRouter: eventRouter,
 	}
 
-	http.HandleFunc("/subscribe", server.subscribe)
+	http.HandleFunc("/ws", server.ws)
 	wsEndpoint := fmt.Sprintf("%s:%s", cfg.WsHost, cfg.WsPort)
 	log.Infof("Listening on: %s", wsEndpoint)
 	log.Fatal(http.ListenAndServe(wsEndpoint, nil))
 }
 
-func (s *Server) subscribe(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal(err, "Unable to upgrade to websocket")

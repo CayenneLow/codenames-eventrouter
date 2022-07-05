@@ -2,10 +2,12 @@ package client
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type ClientType int
@@ -36,7 +38,7 @@ func (ct ClientType) String() string {
 }
 
 func GetClientType(t string) ClientType {
-	switch t {
+	switch strings.ToLower(t) {
 	case "host":
 		return Host
 	case "spymaster":
@@ -53,6 +55,7 @@ func (c *Client) EmitEvent(event event.Event) error {
 	if err != nil {
 		return errors.Wrap(err, "Error marshalling event")
 	}
+	log.Debugf("Emitting event: %s", eventJson)
 	if err := c.Ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
 		return errors.Wrap(err, "Error writing message to websocket")
 	}

@@ -2,6 +2,7 @@ package eventrouter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
@@ -32,6 +33,19 @@ func NewEventRouter(config config.Config) EventRouter {
 
 func (er *EventRouter) AddClient(clientType client.ClientType, cl Client) {
 	er.clients[clientType] = append(er.clients[clientType], cl)
+	event, err := event.FromJSON([]byte(fmt.Sprintf(`{
+		"type": "startConn",
+		"gameID": "",
+		"timestamp": %d,
+		"payload": {
+			"status": "success",
+			"message": {}
+		}
+	}`, time.Now().Unix())))
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "Error creating startConn Ack JSON"))
+	}
+	cl.EmitEvent(event)
 }
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
