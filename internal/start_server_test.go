@@ -22,6 +22,7 @@ type TestSuite struct {
 	cfg      config.Config
 	ServerWS *websocket.Conn
 	HostWS   *websocket.Conn
+	Host2WS  *websocket.Conn
 }
 
 var (
@@ -55,6 +56,12 @@ func (suite *TestSuite) SetupTest() {
 		log.Fatal(fmt.Sprintf("Not able to create Host WS: %v", err))
 	}
 	suite.HostWS = conn
+	// Start Host2 websocket
+	conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Not able to create Host WS: %v", err))
+	}
+	suite.Host2WS = conn
 	// Start Server websocket
 	conn, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
@@ -141,7 +148,7 @@ func (suite *TestSuite) TestNewGame() {
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedNewGameEvent, actualNewGameEvent)
 
-	// Server write Acknowledgement
+	// Mocking ACK sent by server
 	gameID := "T35T3"
 	ts := time.Now().Unix()
 	expectedNewGameAckJson := fmt.Sprintf(`{
@@ -168,7 +175,99 @@ func (suite *TestSuite) TestNewGame() {
 	assert.Equal(suite.T(), strings.ToUpper(gameID), gameID) // assert all upper case
 	// Assert rest of JSON
 	assert.Equal(suite.T(), expectedNewGameAckEvent, actualNewGameAckEvent)
+}
 
+func (suite *TestSuite) TestJoinGameMultipleGameIDs() {
+	// Subscribe Host1
+	startConnJson := fmt.Sprintf(startConnMsg, time.Now().Unix(), client.Host.String())
+	err := suite.HostWS.WriteMessage(websocket.TextMessage, []byte(startConnJson))
+	assert.NoError(suite.T(), err)
+	_, _, err = suite.HostWS.ReadMessage() // Acknowledge
+	assert.NoError(suite.T(), err)
+	// Subscribe Host2
+	err = suite.Host2WS.WriteMessage(websocket.TextMessage, []byte(startConnJson))
+	assert.NoError(suite.T(), err)
+	_, _, err = suite.Host2WS.ReadMessage() // Acknowledge
+	assert.NoError(suite.T(), err)
+	// Subscribe Server
+	startConnJson = fmt.Sprintf(startConnMsg, time.Now().Unix(), client.Server.String())
+	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(startConnJson))
+	assert.NoError(suite.T(), err)
+	_, _, err = suite.ServerWS.ReadMessage() // Acknowledge
+	assert.NoError(suite.T(), err)
+
+	// New Game Host1
+	newGameJson := fmt.Sprintf(`{
+		"type": "newGame",
+		"gameID": "",
+		"timestamp": %d,
+		"payload": {
+			"status": "",
+			"message": {
+				"clientType": "host",
+				"sessionId": "testSession"
+			}
+		}
+	}`, time.Now().Unix())
+	log.Debug("Writing Host 1 new game message")
+	err = suite.HostWS.WriteMessage(websocket.TextMessage, []byte(newGameJson))
+	assert.NoError(suite.T(), err)
+	// Acknowlege Host1's new game request
+	gameID := "HOST1"
+	ts := time.Now().Unix()
+	expectedNewGameAckJson := fmt.Sprintf(`{
+		"type": "newGame",
+		"gameID": "%s",
+		"timestamp": %d,
+		"payload": {
+			"status": "success",
+			"message": {}
+		}
+	}`, gameID, ts)
+	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(expectedNewGameAckJson))
+	suite.HostWS.ReadMessage() // ack from host 1
+
+	// New Game Host2
+	log.Debug("Writing new game message")
+	err = suite.Host2WS.WriteMessage(websocket.TextMessage, []byte(newGameJson))
+	assert.NoError(suite.T(), err)
+
+	// Acknowledge Host2's new game request
+	gameID2 := "HOST2"
+	ts = time.Now().Unix()
+	expectedNewGameAckJson2 := fmt.Sprintf(`{
+		"type": "newGame",
+		"gameID": "%s",
+		"timestamp": %d,
+		"payload": {
+			"status": "success",
+			"message": {}
+		}
+	}`, gameID2, ts)
+	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(expectedNewGameAckJson2))
+
+	// Acknowledge from Host 2
+	_, msg, err := suite.Host2WS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	ackEvent, err := event.FromJSON(msg)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), gameID, ackEvent.GameID)
+
+	// Asserts that Host 1 did not receive the message intended for host 2
+	done := make(chan bool)
+	go func() {
+		_, msg, err = suite.HostWS.ReadMessage()
+		event1, err := event.FromJSON(msg)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), gameID, event1.GameID)
+		log.Debugf("Received GameID: %s", event1.GameID)
+		done <- true
+	}()
+
+	// Unblocks Host 1
+	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(expectedNewGameAckJson))
+	assert.NoError(suite.T(), err)
+	<-done
 }
 
 func TestTestSuite(t *testing.T) {
