@@ -14,6 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// This test creates a websocket for integration testing.
+// Feature tested:
+// 	- Subscribing client to websocket
+// 	- Routing events and receiving acknowledgement events with multiple gameIDs
 func TestIntegrationSubscribe(t *testing.T) {
 	// Init config
 	cfg := config.Init()
