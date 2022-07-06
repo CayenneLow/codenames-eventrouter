@@ -2,11 +2,13 @@ package eventrouter
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -33,15 +35,16 @@ func NewEventRouter(config config.Config) EventRouter {
 
 func (er *EventRouter) AddClient(clientType client.ClientType, cl Client) {
 	er.clients[clientType] = append(er.clients[clientType], cl)
+	gameId := newGameId()
 	event, err := event.FromJSON([]byte(fmt.Sprintf(`{
 		"type": "startConn",
-		"gameID": "",
+		"gameID": "%s",
 		"timestamp": %d,
 		"payload": {
 			"status": "success",
 			"message": {}
 		}
-	}`, time.Now().Unix())))
+	}`, gameId, time.Now().Unix())))
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Error creating startConn Ack JSON"))
 	}
@@ -82,4 +85,11 @@ func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 			}
 		}
 	}
+}
+
+// TODO: Remove, router should not be creating new game
+func newGameId() string {
+	newUuid := uuid.NewString()
+	gameID := strings.ToUpper(newUuid[:5])
+	return gameID
 }

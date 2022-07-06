@@ -18,6 +18,10 @@ type Server struct {
 	eventRouter eventrouter.EventRouter
 }
 
+func hello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello World")
+}
+
 func StartServer(cfg config.Config) {
 	log.Info("Starting Server")
 	eventRouter := eventrouter.NewEventRouter(cfg)
@@ -26,6 +30,7 @@ func StartServer(cfg config.Config) {
 		eventRouter: eventRouter,
 	}
 
+	http.HandleFunc("/", hello)
 	http.HandleFunc("/ws", server.ws)
 	wsEndpoint := fmt.Sprintf("%s:%s", cfg.WsHost, cfg.WsPort)
 	log.Infof("Listening on: %s", wsEndpoint)
@@ -35,7 +40,7 @@ func StartServer(cfg config.Config) {
 func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err, "Unable to upgrade to websocket")
+		log.Error(err, "Unable to upgrade to websocket")
 	}
 	defer c.Close()
 	for {

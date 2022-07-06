@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestIntegrationSubscribe(t *testing.T) {
-	// Start server
+	// Init config
 	cfg := config.Init()
 	// Start client websocket
 	u := url.URL{
@@ -29,7 +30,7 @@ func TestIntegrationSubscribe(t *testing.T) {
 	json.Unmarshal([]byte(`{
 		"type": "startConn",
 		"gameID": "",
-		"timestamp": 111111,
+		"timestamp": 111111j,
 		"payload": {
 			"status": "success",
 			"message": {}
@@ -49,10 +50,18 @@ func TestIntegrationSubscribe(t *testing.T) {
 				actualEvent, err := event.FromJSON(msg)
 				assert.NoError(t, err)
 				startConnAckJson.Timestamp = actualEvent.Timestamp // nullify timestamp comparison
+				// test gameID
+				gameID := actualEvent.GameID
+				assert.NotEqual(t, "", gameID)
+				assert.Len(t, gameID, 5)
+				assert.Equal(t, strings.ToUpper(gameID), gameID) // assert all upper case
+				startConnAckJson.GameID = gameID                 // nullify timestamp comparison
+				// Test JSON
 				assert.Equal(t, startConnAckJson, actualEvent)
-				done <- true
+				// Mark this test as done
 				index++
-
+			default:
+				done <- true
 			}
 		}
 	}()

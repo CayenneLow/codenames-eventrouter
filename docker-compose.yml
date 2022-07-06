@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  eventrouter:
+    container_name: event_router_server
+    command: "./bin/start_event_router"
+    ports:
+      - "8081:8081"
+    env_file:
+      - .envrc
+    environment:
+      - FORWARDING_RULES_PATH=/app/config/forwarding_rules.yaml
+    build:
+      dockerfile: Dockerfile
+      context: .    
+    restart: always
