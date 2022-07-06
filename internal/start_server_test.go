@@ -30,7 +30,7 @@ func TestIntegrationSubscribe(t *testing.T) {
 	json.Unmarshal([]byte(`{
 		"type": "startConn",
 		"gameID": "",
-		"timestamp": 111111j,
+		"timestamp": 111111,
 		"payload": {
 			"status": "success",
 			"message": {}

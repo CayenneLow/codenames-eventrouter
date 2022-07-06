@@ -32,7 +32,7 @@ func StartServer(cfg config.Config) {
 
 	http.HandleFunc("/", hello)
 	http.HandleFunc("/ws", server.ws)
-	wsEndpoint := fmt.Sprintf("%s:%s", cfg.WsHost, cfg.WsPort)
+	wsEndpoint := fmt.Sprintf(":%s", cfg.WsPort)
 	log.Infof("Listening on: %s", wsEndpoint)
 	log.Fatal(http.ListenAndServe(wsEndpoint, nil))
 }

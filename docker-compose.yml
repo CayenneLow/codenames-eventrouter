@@ -5,7 +5,7 @@ services:
     container_name: event_router_server
     command: "./bin/start_event_router"
     ports:
-      - "8081:8081"
+      - "8080:8080"
     env_file:
       - .envrc
     environment:
