@@ -3,7 +3,6 @@ package eventrouter
 import (
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
@@ -13,53 +12,58 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ClientMetadata struct {
+	cType   client.ClientType
+	gameIDs []string
+}
+
 type EventRouter struct {
-	config             config.Config
-	clientTypeToClient map[client.ClientType]([]client.IClient)
-	addrToClientType   map[net.Addr](client.ClientType)
+	config               config.Config
+	clientTypeToClient   map[string](map[client.ClientType]([]client.IClient)) // gameID -> clientType -> []Clients
+	addrToClientMetadata map[net.Addr](ClientMetadata)
 }
 
 func NewEventRouter(config config.Config) EventRouter {
 	eventRouter := EventRouter{
-		config:             config,
-		clientTypeToClient: map[client.ClientType][]client.IClient{},
-		addrToClientType:   map[net.Addr]client.ClientType{},
+		config:               config,
+		clientTypeToClient:   map[string](map[client.ClientType][]client.IClient){},
+		addrToClientMetadata: map[net.Addr]ClientMetadata{},
 	}
 	return eventRouter
 }
 
-func (er *EventRouter) AddClient(clientType client.ClientType, cl client.IClient) {
-	er.clientTypeToClient[clientType] = append(er.clientTypeToClient[clientType], cl)
-	er.addrToClientType[cl.RemoteAddr()] = clientType
-	event, err := event.FromJSON([]byte(fmt.Sprintf(`{
-		"type": "startConn",
-		"gameID": "",
-		"timestamp": %d,
-		"payload": {
-			"status": "success",
-			"message": {}
+func (er *EventRouter) AddClient(gameID string, clientType client.ClientType, cl client.IClient) {
+	er.clientTypeToClient[gameID][clientType] = append(er.clientTypeToClient[gameID][clientType], cl)
+	if v, ok := er.addrToClientMetadata[cl.RemoteAddr()]; ok {
+		v.gameIDs = append(v.gameIDs, gameID)
+		er.addrToClientMetadata[cl.RemoteAddr()] = v
+	} else {
+		// create new entry
+		er.addrToClientMetadata[cl.RemoteAddr()] = ClientMetadata{
+			cType:   clientType,
+			gameIDs: []string{gameID},
 		}
-	}`, time.Now().Unix())))
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "Error creating startConn Ack JSON"))
 	}
-	cl.EmitEvent(event)
 }
 
 func (er *EventRouter) RemoveClient(addr net.Addr) error {
 	log.Debugf("Removing client: %s", addr)
-	if _, ok := er.addrToClientType[addr]; !ok {
+	if _, ok := er.addrToClientMetadata[addr]; !ok {
 		return errors.New(fmt.Sprintf("Client %s does not exist", addr))
 	}
-	clientType := er.addrToClientType[addr]
-	delete(er.addrToClientType, addr)
-	clients := er.clientTypeToClient[clientType]
-	for i, client := range clients {
-		if client.RemoteAddr() == addr {
-			// Deletes this client by replacing the current index with the last client in the list
-			// then shortening the list by 1
-			er.clientTypeToClient[clientType][i] = clients[len(clients)-1]
-			er.clientTypeToClient[clientType] = er.clientTypeToClient[clientType][:len(clients)-1]
+	clientMetadata := er.addrToClientMetadata[addr]
+	delete(er.addrToClientMetadata, addr)
+	for _, gameID := range clientMetadata.gameIDs {
+		clients := er.clientTypeToClient[gameID][clientMetadata.cType]
+		for i, client := range clients {
+			// Find client to delete
+			if client.RemoteAddr() == addr {
+				// Deletes this client by replacing the current index with the last client in the list
+				// then shortening the list by 1
+				er.clientTypeToClient[gameID][clientMetadata.cType][i] = clients[len(clients)-1]
+				er.clientTypeToClient[gameID][clientMetadata.cType] = er.clientTypeToClient[gameID][clientMetadata.cType][:len(clients)-1]
+				break
+			}
 		}
 	}
 	return nil

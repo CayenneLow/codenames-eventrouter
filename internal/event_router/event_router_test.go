@@ -48,7 +48,7 @@ func TestAddClient(t *testing.T) {
 
 		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 1)
 		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
-		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
+		assert.Equal(t, client.Host, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
 	})
 
 	t.Run("Test appending client", func(t *testing.T) {
@@ -62,8 +62,8 @@ func TestAddClient(t *testing.T) {
 		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 2)
 		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
 		assert.Equal(t, &mockHost2, eventRouter.clientTypeToClient[client.Host][1])
-		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
-		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost2.RemoteAddr()])
+		assert.Equal(t, client.Host, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
+		assert.Equal(t, client.Host, eventRouter.addrToClientMetadata[mockHost2.RemoteAddr()])
 	})
 
 	t.Run("Test adding different types of clients", func(t *testing.T) {
@@ -78,8 +78,8 @@ func TestAddClient(t *testing.T) {
 		assert.Len(t, eventRouter.clientTypeToClient[client.Server], 1)
 		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
 		assert.Equal(t, &mockServer, eventRouter.clientTypeToClient[client.Server][0])
-		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
-		assert.Equal(t, client.Server, eventRouter.addrToClientType[mockServer.RemoteAddr()])
+		assert.Equal(t, client.Host, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
+		assert.Equal(t, client.Server, eventRouter.addrToClientMetadata[mockServer.RemoteAddr()])
 	})
 }
 
@@ -92,7 +92,7 @@ func TestRemoveClient(t *testing.T) {
 		err := eventRouter.RemoveClient(mockHost.RemoteAddr())
 		assert.NoError(t, err)
 		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 0)
-		assert.NotContains(t, eventRouter.addrToClientType, mockHost)
+		assert.NotContains(t, eventRouter.addrToClientMetadata, mockHost)
 	})
 
 	t.Run("Test removing non-existing client", func(t *testing.T) {
