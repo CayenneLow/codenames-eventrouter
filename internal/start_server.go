@@ -57,4 +57,6 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 		}
 		s.eventRouter.HandleEvent(c, event)
 	}
+	// Remove from event router
+	s.eventRouter.RemoveClient(c.RemoteAddr())
 }

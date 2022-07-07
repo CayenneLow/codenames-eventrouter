@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"strings"
 
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
@@ -12,9 +14,17 @@ import (
 
 type ClientType int
 
+type IClient interface {
+	EmitEvent(event event.Event) error
+	CType() ClientType
+	WS() *websocket.Conn
+	RemoteAddr() net.Addr
+}
+
 type Client struct {
-	Type ClientType
-	Ws   *websocket.Conn
+	cType      ClientType
+	ws         *websocket.Conn
+	remoteAddr net.Addr
 }
 
 const (
@@ -23,6 +33,14 @@ const (
 	Server
 	Unknown
 )
+
+func NewClient(cType ClientType, ws *websocket.Conn, remoteAddr net.Addr) Client {
+	return Client{
+		cType:      cType,
+		ws:         ws,
+		remoteAddr: remoteAddr,
+	}
+}
 
 func (ct ClientType) String() string {
 	switch ct {
@@ -50,22 +68,30 @@ func GetClientType(t string) ClientType {
 	}
 }
 
-func (c *Client) EmitEvent(event event.Event) error {
+func (c Client) EmitEvent(event event.Event) error {
 	eventJson, err := json.Marshal(event)
 	if err != nil {
 		return errors.Wrap(err, "Error marshalling event")
 	}
 	log.Debugf("Emitting event: %s", eventJson)
-	if err := c.Ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
+	if err := c.ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
 		return errors.Wrap(err, "Error writing message to websocket")
 	}
 	return nil
 }
 
-func (c *Client) GetType() ClientType {
-	return c.Type
+func (c Client) CType() ClientType {
+	return c.cType
 }
 
-func (c *Client) GetConn() *websocket.Conn {
-	return c.Ws
+func (c Client) WS() *websocket.Conn {
+	return c.ws
+}
+
+func (c Client) RemoteAddr() net.Addr {
+	return c.remoteAddr
+}
+
+func (c Client) String() string {
+	return fmt.Sprintf("Client %s (%s)", c.cType.String(), c.ws.RemoteAddr())
 }

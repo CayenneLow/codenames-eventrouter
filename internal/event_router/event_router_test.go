@@ -1,6 +1,7 @@
 package eventrouter
 
 import (
+	"net"
 	"testing"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
@@ -10,100 +11,95 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockServer struct{}
-type MockHost struct{}
+type MockServer struct {
+	emitted bool
+	ws      *websocket.Conn
+	remote  net.Addr
+}
 
-var emittedServer = false
-
-func (m *MockServer) EmitEvent(event event.Event) error {
-	emittedServer = true
+func (m MockServer) EmitEvent(event event.Event) error {
+	m.emitted = true
 	return nil
 }
-func (m *MockServer) GetType() client.ClientType { return client.Server }
-func (m *MockServer) GetConn() *websocket.Conn   { return &websocket.Conn{} }
+func (m MockServer) CType() client.ClientType { return client.Server }
+func (m MockServer) WS() *websocket.Conn      { return &websocket.Conn{} }
+func (m MockServer) RemoteAddr() net.Addr     { return m.remote }
 
-var emittedHost = false
+type MockHost struct {
+	emitted bool
+	ws      *websocket.Conn
+	remote  net.Addr
+}
 
-func (m *MockHost) EmitEvent(event event.Event) error {
-	emittedHost = true
+func (m MockHost) EmitEvent(event event.Event) error {
+	m.emitted = true
 	return nil
 }
-func (m *MockHost) GetType() client.ClientType { return client.Host }
-func (m *MockHost) GetConn() *websocket.Conn   { return &websocket.Conn{} }
-
-func TestForwarding(t *testing.T) {
-	cfg := initConfig()
-	eventRouter := NewEventRouter(cfg)
-	mockServer := MockServer{}
-	eventRouter.AddClient(client.Server, &mockServer)
-	mockHost := MockHost{}
-	eventRouter.AddClient(client.Host, &mockHost)
-	t.Run("Test forward to receiver", func(t *testing.T) {
-		mockEvent := event.Event{
-			Type:      "newGame",
-			GameID:    "test",
-			Timestamp: 111111,
-			Payload: event.Payload{
-				Status: "",
-				Message: map[string](interface{}){
-					"Test": "Test",
-				},
-			},
-		}
-		eventRouter.HandleEvent(&websocket.Conn{}, mockEvent)
-		assert.True(t, emittedServer)
-	})
-
-	t.Run("Test forward to acknowledger", func(t *testing.T) {
-		mockAckEvent := event.Event{
-			Type:      "newGame",
-			GameID:    "test",
-			Timestamp: 111111,
-			Payload: event.Payload{
-				Status: "Success",
-				Message: map[string](interface{}){
-					"Test": "Test",
-				},
-			},
-		}
-		eventRouter.HandleEvent(&websocket.Conn{}, mockAckEvent)
-		assert.True(t, emittedHost)
-	})
-}
+func (m MockHost) CType() client.ClientType { return client.Server }
+func (m MockHost) WS() *websocket.Conn      { return &websocket.Conn{} }
+func (m MockHost) RemoteAddr() net.Addr     { return m.remote }
 
 func TestAddClient(t *testing.T) {
 	cfg := initConfig()
 	t.Run("Test add client with no conflict", func(t *testing.T) {
 		eventRouter := NewEventRouter(cfg)
-		mockHost := MockHost{}
+		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		eventRouter.AddClient(client.Host, &mockHost)
 
-		assert.Len(t, eventRouter.clients[client.Host], 1)
-		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
+		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 1)
+		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
+		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
 	})
 
 	t.Run("Test appending client", func(t *testing.T) {
 		eventRouter := NewEventRouter(cfg)
-		mockHost := MockHost{}
-		eventRouter.AddClient(client.Host, &mockHost)
-		eventRouter.AddClient(client.Host, &mockHost)
+		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
+		mockHost2 := MockHost{remote: &net.IPAddr{IP: net.IPv4(2, 2, 2, 2)}}
 
-		assert.Len(t, eventRouter.clients[client.Host], 2)
-		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
-		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][1])
+		eventRouter.AddClient(client.Host, &mockHost)
+		eventRouter.AddClient(client.Host, &mockHost2)
+
+		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 2)
+		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
+		assert.Equal(t, &mockHost2, eventRouter.clientTypeToClient[client.Host][1])
+		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
+		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost2.RemoteAddr()])
 	})
 
 	t.Run("Test adding different types of clients", func(t *testing.T) {
 		eventRouter := NewEventRouter(cfg)
-		mockHost := MockHost{}
+		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		eventRouter.AddClient(client.Host, &mockHost)
-		mockServer := MockServer{}
+
+		mockServer := MockServer{remote: &net.IPAddr{IP: net.IPv4(2, 2, 2, 2)}}
 		eventRouter.AddClient(client.Server, &mockServer)
 
-		assert.Len(t, eventRouter.clients[client.Host], 1)
-		assert.Len(t, eventRouter.clients[client.Server], 1)
-		assert.Equal(t, &mockHost, eventRouter.clients[client.Host][0])
-		assert.Equal(t, &mockServer, eventRouter.clients[client.Server][0])
+		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 1)
+		assert.Len(t, eventRouter.clientTypeToClient[client.Server], 1)
+		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[client.Host][0])
+		assert.Equal(t, &mockServer, eventRouter.clientTypeToClient[client.Server][0])
+		assert.Equal(t, client.Host, eventRouter.addrToClientType[mockHost.RemoteAddr()])
+		assert.Equal(t, client.Server, eventRouter.addrToClientType[mockServer.RemoteAddr()])
+	})
+}
+
+func TestRemoveClient(t *testing.T) {
+	cfg := initConfig()
+	t.Run("Test removing existing client", func(t *testing.T) {
+		eventRouter := NewEventRouter(cfg)
+		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
+		eventRouter.AddClient(client.Host, &mockHost)
+		err := eventRouter.RemoveClient(mockHost.RemoteAddr())
+		assert.NoError(t, err)
+		assert.Len(t, eventRouter.clientTypeToClient[client.Host], 0)
+		assert.NotContains(t, eventRouter.addrToClientType, mockHost)
+	})
+
+	t.Run("Test removing non-existing client", func(t *testing.T) {
+		eventRouter := NewEventRouter(cfg)
+		remote := &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}
+		err := eventRouter.RemoveClient(remote)
+		assert.Error(t, err)
 	})
 }
 
