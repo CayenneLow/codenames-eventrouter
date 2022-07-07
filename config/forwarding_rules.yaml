@@ -1,13 +1,8 @@
 forwarding_rules:
-  newGame: # Event name
+  joinGame: # Event name
     receivers: # Consumers of the event
     - server
     acknowledgers: # Consumers that care about acknowledgements
-    - host
-  joinGame:
-    receivers:
-    - server
-    acknowledgers:
     - host
     - spymaster
   sufficientSpyMasters:
