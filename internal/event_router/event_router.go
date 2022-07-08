@@ -33,6 +33,13 @@ func NewEventRouter(config config.Config) EventRouter {
 }
 
 func (er *EventRouter) AddClient(gameID string, clientType client.ClientType, cl client.IClient) {
+	if _, ok := er.clientTypeToClient[gameID]; !ok {
+		// Initialize
+		er.clientTypeToClient[gameID] = map[client.ClientType][]client.IClient{}
+		er.clientTypeToClient[gameID][client.Host] = []client.IClient{}
+		er.clientTypeToClient[gameID][client.Server] = []client.IClient{}
+		er.clientTypeToClient[gameID][client.Spymaster] = []client.IClient{}
+	}
 	er.clientTypeToClient[gameID][clientType] = append(er.clientTypeToClient[gameID][clientType], cl)
 	if v, ok := er.addrToClientMetadata[cl.RemoteAddr()]; ok {
 		v.gameIDs = append(v.gameIDs, gameID)
@@ -70,39 +77,39 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 }
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
+	log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
 	eventType := event.Type
+	gameID := event.GameID
 	var recipients []client.IClient
-	if eventType == "startConn" {
+	if eventType == "joinGame" {
 		var clientType string
 		if n, ok := event.Payload.Message["clientType"].(string); ok {
 			clientType = string(n)
 		}
 		cl := client.NewClient(client.GetClientType(clientType), conn, conn.RemoteAddr())
-		er.AddClient(client.GetClientType(clientType), cl)
-		log.Debugf("Adding %s to clients. Clients: %v", conn.RemoteAddr(), er.clientTypeToClient)
-	} else {
-		log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
-		if event.Payload.Status == "" {
-			// initiator message
-			receivers := er.config.GetReceivers(eventType)
-			log.Debugf("Receivers: %v", receivers)
-			for _, r := range receivers {
-				recipients = append(recipients, er.clientTypeToClient[client.GetClientType(r)]...)
-			}
-		} else {
-			// acknowledge mesasge
-			acknowledgers := er.config.GetAcknowledgers(eventType)
-			log.Debugf("Acknowledgers: %v", acknowledgers)
-			for _, a := range acknowledgers {
-				recipients = append(recipients, er.clientTypeToClient[client.GetClientType(a)]...)
-			}
+		er.AddClient(gameID, client.GetClientType(clientType), cl)
+		log.Debugf("Adding %s to EventRouter Clients. Clients: %v", conn.RemoteAddr(), er.clientTypeToClient[gameID])
+	}
+	if event.Payload.Status == "" {
+		// initiator message
+		receivers := er.config.GetReceivers(eventType)
+		log.Debugf("Receivers: %v", receivers)
+		for _, r := range receivers {
+			recipients = append(recipients, er.clientTypeToClient[gameID][client.GetClientType(r)]...)
 		}
-		for _, r := range recipients {
-			log.Debugf("Emitting to: %s", r.RemoteAddr())
-			err := r.EmitEvent(event)
-			if err != nil {
-				log.Error(errors.Wrap(err, fmt.Sprintf("Error emitting event to: %s (%v)", r.CType(), r.RemoteAddr())))
-			}
+	} else {
+		// acknowledge mesasge
+		acknowledgers := er.config.GetAcknowledgers(eventType)
+		log.Debugf("Acknowledgers: %v", acknowledgers)
+		for _, a := range acknowledgers {
+			recipients = append(recipients, er.clientTypeToClient[gameID][client.GetClientType(a)]...)
+		}
+	}
+	for _, r := range recipients {
+		log.Debugf("Emitting to: %s", r.RemoteAddr())
+		err := r.EmitEvent(event)
+		if err != nil {
+			log.Error(errors.Wrap(err, fmt.Sprintf("Error emitting event to: %s (%v)", r.CType(), r.RemoteAddr())))
 		}
 	}
 }
