@@ -40,7 +40,7 @@ func (m MockHost) WS() *websocket.Conn      { return &websocket.Conn{} }
 func (m MockHost) RemoteAddr() net.Addr     { return m.remote }
 
 func TestAddClient(t *testing.T) {
-	cfg := initConfig()
+	cfg := config.Init()
 	t.Run("Test add client with no conflict", func(t *testing.T) {
 		gameID := "T35T1"
 		eventRouter := NewEventRouter(cfg)
@@ -48,8 +48,8 @@ func TestAddClient(t *testing.T) {
 		mockClientMetadata := ClientMetadata{cType: client.Host, gameIDs: []string{gameID}}
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
 
-		assert.Len(t, eventRouter.clientTypeToClient[gameID][client.Host], 1)
-		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[gameID][client.Host][0])
+		assert.Len(t, eventRouter.gameIDToClients[gameID], 1)
+		assert.Equal(t, &mockHost, eventRouter.gameIDToClients[gameID][0])
 		assert.Equal(t, mockClientMetadata, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
 	})
 
@@ -64,9 +64,9 @@ func TestAddClient(t *testing.T) {
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
 		eventRouter.AddClient(gameID, client.Host, &mockHost2)
 
-		assert.Len(t, eventRouter.clientTypeToClient[gameID][client.Host], 2)
-		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[gameID][client.Host][0])
-		assert.Equal(t, &mockHost2, eventRouter.clientTypeToClient[gameID][client.Host][1])
+		assert.Len(t, eventRouter.gameIDToClients[gameID], 2)
+		assert.Equal(t, &mockHost, eventRouter.gameIDToClients[gameID][0])
+		assert.Equal(t, &mockHost2, eventRouter.gameIDToClients[gameID][1])
 		assert.Equal(t, mockClientMetadata1, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
 		assert.Equal(t, mockClientMetadata2, eventRouter.addrToClientMetadata[mockHost2.RemoteAddr()])
 	})
@@ -82,17 +82,16 @@ func TestAddClient(t *testing.T) {
 		mockClientMetadata2 := ClientMetadata{cType: client.Server, gameIDs: []string{gameID}}
 		eventRouter.AddClient(gameID, client.Server, &mockServer)
 
-		assert.Len(t, eventRouter.clientTypeToClient[gameID][client.Host], 1)
-		assert.Len(t, eventRouter.clientTypeToClient[gameID][client.Server], 1)
-		assert.Equal(t, &mockHost, eventRouter.clientTypeToClient[gameID][client.Host][0])
-		assert.Equal(t, &mockServer, eventRouter.clientTypeToClient[gameID][client.Server][0])
+		assert.Len(t, eventRouter.gameIDToClients[gameID], 2)
+		assert.Equal(t, &mockHost, eventRouter.gameIDToClients[gameID][0])
+		assert.Equal(t, &mockServer, eventRouter.gameIDToClients[gameID][1])
 		assert.Equal(t, mockClientMetadata1, eventRouter.addrToClientMetadata[mockHost.RemoteAddr()])
 		assert.Equal(t, mockClientMetadata2, eventRouter.addrToClientMetadata[mockServer.RemoteAddr()])
 	})
 }
 
 func TestRemoveClient(t *testing.T) {
-	cfg := initConfig()
+	cfg := config.Init()
 	gameID := "T35T1"
 	t.Run("Test removing existing client", func(t *testing.T) {
 		eventRouter := NewEventRouter(cfg)
@@ -100,7 +99,7 @@ func TestRemoveClient(t *testing.T) {
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
 		err := eventRouter.RemoveClient(mockHost.RemoteAddr())
 		assert.NoError(t, err)
-		assert.Len(t, eventRouter.clientTypeToClient[gameID][client.Host], 0)
+		assert.Len(t, eventRouter.gameIDToClients[gameID], 0)
 		assert.NotContains(t, eventRouter.addrToClientMetadata, mockHost)
 	})
 
@@ -110,15 +109,4 @@ func TestRemoveClient(t *testing.T) {
 		err := eventRouter.RemoveClient(remote)
 		assert.Error(t, err)
 	})
-}
-
-func initConfig() config.Config {
-	return config.Config{
-		ForwardingRules: map[string]map[string][]string{
-			"newGame": {
-				"receivers":     []string{"server"},
-				"acknowledgers": []string{"host"},
-			},
-		},
-	}
 }

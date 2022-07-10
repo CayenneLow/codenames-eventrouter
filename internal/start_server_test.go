@@ -28,23 +28,34 @@ var (
 	joinGameJson = `{
 		"type": "joinGame",
 		"gameID": "%s",
+		"sessionID": "%s",
 		"timestamp": %d,
 		"payload": {
 			"status": "",
 			"message": {
-				"clientType": "%s",
-				"sessionID": "%s"
+				"clientType": "%s"
 			}
 		}
 	}`
 	joinGameAckJson = `{
 		"type": "joinGame",
 		"gameID": "%s",
+		"sessionID": "%s",
+		"timestamp": %d,
+		"payload": {
+			"status": "%s",
+			"message": {}
+		}
+	}`
+	joinGameSpymasterAckJson = `{
+		"type": "joinGame",
+		"gameID": "%s",
+		"sessionID": "%s",
 		"timestamp": %d,
 		"payload": {
 			"status": "%s",
 			"message": {
-				"sessionID": "%s"
+				"team": "%s"
 			}
 		}
 	}`
@@ -95,58 +106,138 @@ func (suite *TestSuite) TearDownTest() {
 func (suite *TestSuite) TestJoinGame() {
 	const gameID = "T35T1" // GameID obtained via direct REST API call Host -> Server
 	// Server joins game first
-	joinGameJson := newJoinGameJson(gameID, client.Server.String(), "")
-	err := suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
+	log.Debug("Server joining game")
+	joinGameJson := newJoinGameJson(gameID, client.Server.String(), "test-server-session")
+	err := suite.ServerWS.WriteMessage(websocket.TextMessage, joinGameJson)
 	assert.NoError(suite.T(), err)
 
-	// Host joins game next
-	joinGameJson = newJoinGameJson(gameID, client.Host.String(), "")
-	err = suite.HostWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
-	assert.NoError(suite.T(), err)
-
-	// Assert that Host receives ACK
-	log.Debug("Asserting Host received ACK")
-	joinGameAckJson := newJoinGameAckJson(gameID, "success", "")
-	msgType, msg, err := suite.HostWS.ReadMessage()
+	// Assert that Server receives ACK
+	log.Debug("Asserting Server received Server ACK")
+	joinGameAckJson := newJoinGameAckJson(gameID, "success", "test-server-session")
+	msgType, msg, err := suite.ServerWS.ReadMessage()
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), websocket.TextMessage, msgType)
-	// Convert to Event then compare
-	expectedJoinGameAckEvent, err := event.FromJSON([]byte(joinGameAckJson))
-	assert.NoError(suite.T(), err)
-	actualJoinGameAckEvent, err := event.FromJSON(msg)
-	assert.NoError(suite.T(), err)
-	expectedJoinGameAckEvent.Timestamp = actualJoinGameAckEvent.Timestamp // nullify timestamp equality check
-	assert.Equal(suite.T(), expectedJoinGameAckEvent, actualJoinGameAckEvent)
+	assertJsonEvent(suite, joinGameAckJson, msg)
 
-	// Spymaster joins game next
-	joinGameJson = newJoinGameJson(gameID, client.Spymaster.String(), "test-session")
-	err = suite.SpymasterWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
-	assert.NoError(suite.T(), err)
-
-	// Assert Server received join game event
-	log.Debug("Asserting Server received ACK")
+	// Assert that Server receives joinGame Event
+	log.Debug("Asserting Server received Server's joinGame event")
 	msgType, msg, err = suite.ServerWS.ReadMessage()
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), websocket.TextMessage, msgType)
-	assert.Equal(suite.T(), joinGameJson, string(msg))
+	assertJsonEvent(suite, joinGameJson, msg)
 
-	// Mock Server joinGame ACK
-	joinGameAckJson = newJoinGameAckJson(gameID, "success", "test-session")
-	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
+	// Host joins game next
+	log.Debug("Host joining game")
+	joinGameJson = newJoinGameJson(gameID, client.Host.String(), "test-host-session")
+	err = suite.HostWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
 	assert.NoError(suite.T(), err)
 
-	// Assert Spymaster receives joinGame ACK
-	log.Debug("Asserting Spymaster received ACK")
+	// Assert that Server receives joinGame ACK event
+	log.Debug("Asserting Server received Host ACK")
+	joinGameAckJson = newJoinGameAckJson(gameID, "success", "test-host-session")
+	msgType, msg, err = suite.ServerWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+	// Assert that Host receives joinGame ACK Event
+	log.Debug("Asserting Host received Host ACK")
+	msgType, msg, err = suite.HostWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+
+	// Assert that Server receives joinGame Event
+	log.Debug("Asserting Server received Host's joinGame event")
+	msgType, msg, err = suite.ServerWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameJson, msg)
+	// Assert that Host receives joinGame Event
+	log.Debug("Asserting Host received Host's joinGame event")
+	msgType, msg, err = suite.HostWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameJson, msg)
+
+	// Spymaster joins game next
+	log.Debug("Spymaster joining game")
+	joinGameJson = newJoinGameJson(gameID, client.Spymaster.String(), "test-spymaster-session")
+	err = suite.SpymasterWS.WriteMessage(websocket.TextMessage, []byte(joinGameJson))
+	assert.NoError(suite.T(), err)
+
+	// Assert that Server receives joinGame ACK event
+	log.Debug("Asserting Server received Spymaster ACK")
+	joinGameAckJson = newJoinGameAckJson(gameID, "success", "test-spymaster-session")
+	msgType, msg, err = suite.ServerWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+	// Assert that Host receives joinGame ACK Event
+	log.Debug("Asserting Host received Spymaster ACK")
+	msgType, msg, err = suite.HostWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+	// Assert that Spymaster receives joinGame ACK Event
+	log.Debug("Asserting Spymaster received Spymaster ACK")
 	msgType, msg, err = suite.SpymasterWS.ReadMessage()
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), websocket.TextMessage, msgType)
-	// Convert to Event then compare
-	expectedJoinGameAckEvent, err = event.FromJSON([]byte(joinGameAckJson))
+	assertJsonEvent(suite, joinGameAckJson, msg)
+
+	// Assert that Server receives joinGame Event
+	log.Debug("Asserting Server received Spymaster's joinGame event")
+	msgType, msg, err = suite.ServerWS.ReadMessage()
 	assert.NoError(suite.T(), err)
-	actualJoinGameAckEvent, err = event.FromJSON(msg)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameJson, msg)
+	// Assert that Host receives joinGame Event
+	log.Debug("Asserting Host received Spymaster's joinGame event")
+	msgType, msg, err = suite.HostWS.ReadMessage()
 	assert.NoError(suite.T(), err)
-	expectedJoinGameAckEvent.Timestamp = actualJoinGameAckEvent.Timestamp // nullify timestamp equality check
-	assert.Equal(suite.T(), expectedJoinGameAckEvent, actualJoinGameAckEvent)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameJson, msg)
+	// Assert that Spymaster receives joinGame Event
+	log.Debug("Asserting Spymaster received Spymaster's joinGame event")
+	msgType, msg, err = suite.SpymasterWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameJson, msg)
+
+	// Mock Server joinGame ACK
+	team := "RED"
+	spymasterJoinGameAckJson := newJoinGameSpymasterAckJson(gameID, "success", "test-spymaster-session", team)
+	err = suite.ServerWS.WriteMessage(websocket.TextMessage, []byte(spymasterJoinGameAckJson))
+	assert.NoError(suite.T(), err)
+
+	// Assert that Server receives joinGame ACK event with team
+	log.Debug("Asserting Server received Spymaster ACK with team")
+	joinGameAckJson = newJoinGameSpymasterAckJson(gameID, "success", "test-spymaster-session", team)
+	msgType, msg, err = suite.ServerWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+	// Assert that Host receives joinGame ACK Event with team
+	log.Debug("Asserting Host received Spymaster ACK with team")
+	msgType, msg, err = suite.HostWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+	// Assert that Spymaster receives joinGame ACK Event with team
+	log.Debug("Asserting Spymaster received Spymaster ACK with team")
+	msgType, msg, err = suite.SpymasterWS.ReadMessage()
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), websocket.TextMessage, msgType)
+	assertJsonEvent(suite, joinGameAckJson, msg)
+}
+
+func assertJsonEvent(suite *TestSuite, expectedJson []byte, actualJson []byte) {
+	expectedEvent, err := event.FromJSON(expectedJson)
+	assert.NoError(suite.T(), err)
+	actualEvent, err := event.FromJSON(actualJson)
+	assert.NoError(suite.T(), err)
+	expectedEvent.Timestamp = actualEvent.Timestamp // nullify timestamp comparison
+	assert.Equal(suite.T(), expectedEvent, actualEvent)
 }
 
 // func (suite *TestSuite) TestJoinGameMultipleGameIDs() {
@@ -242,12 +333,16 @@ func (suite *TestSuite) TestJoinGame() {
 // 	<-done
 // }
 
-func newJoinGameJson(gameID string, clientType string, sessionID string) string {
-	return fmt.Sprintf(joinGameJson, gameID, time.Now().Unix(), clientType, sessionID)
+func newJoinGameJson(gameID string, clientType string, sessionID string) []byte {
+	return []byte(fmt.Sprintf(joinGameJson, gameID, sessionID, time.Now().Unix(), clientType))
 }
 
-func newJoinGameAckJson(gameID string, status string, sessionID string) string {
-	return fmt.Sprintf(joinGameAckJson, gameID, time.Now().Unix(), status, sessionID)
+func newJoinGameAckJson(gameID string, status string, sessionID string) []byte {
+	return []byte(fmt.Sprintf(joinGameAckJson, gameID, sessionID, time.Now().Unix(), status))
+}
+
+func newJoinGameSpymasterAckJson(gameID string, status string, sessionID string, team string) []byte {
+	return []byte(fmt.Sprintf(joinGameSpymasterAckJson, gameID, sessionID, time.Now().Unix(), status, team))
 }
 
 func TestTestSuite(t *testing.T) {

@@ -19,28 +19,25 @@ type ClientMetadata struct {
 
 type EventRouter struct {
 	config               config.Config
-	clientTypeToClient   map[string](map[client.ClientType]([]client.IClient)) // gameID -> clientType -> []Clients
+	gameIDToClients      map[string]([]client.IClient) // gameID -> []Clients
 	addrToClientMetadata map[net.Addr](ClientMetadata)
 }
 
 func NewEventRouter(config config.Config) EventRouter {
 	eventRouter := EventRouter{
 		config:               config,
-		clientTypeToClient:   map[string](map[client.ClientType][]client.IClient){},
+		gameIDToClients:      map[string][]client.IClient{},
 		addrToClientMetadata: map[net.Addr]ClientMetadata{},
 	}
 	return eventRouter
 }
 
 func (er *EventRouter) AddClient(gameID string, clientType client.ClientType, cl client.IClient) {
-	if _, ok := er.clientTypeToClient[gameID]; !ok {
+	if _, ok := er.gameIDToClients[gameID]; !ok {
 		// Initialize
-		er.clientTypeToClient[gameID] = map[client.ClientType][]client.IClient{}
-		er.clientTypeToClient[gameID][client.Host] = []client.IClient{}
-		er.clientTypeToClient[gameID][client.Server] = []client.IClient{}
-		er.clientTypeToClient[gameID][client.Spymaster] = []client.IClient{}
+		er.gameIDToClients[gameID] = []client.IClient{}
 	}
-	er.clientTypeToClient[gameID][clientType] = append(er.clientTypeToClient[gameID][clientType], cl)
+	er.gameIDToClients[gameID] = append(er.gameIDToClients[gameID], cl)
 	if v, ok := er.addrToClientMetadata[cl.RemoteAddr()]; ok {
 		v.gameIDs = append(v.gameIDs, gameID)
 		er.addrToClientMetadata[cl.RemoteAddr()] = v
@@ -61,14 +58,14 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 	clientMetadata := er.addrToClientMetadata[addr]
 	delete(er.addrToClientMetadata, addr)
 	for _, gameID := range clientMetadata.gameIDs {
-		clients := er.clientTypeToClient[gameID][clientMetadata.cType]
+		clients := er.gameIDToClients[gameID]
 		for i, client := range clients {
 			// Find client to delete
 			if client.RemoteAddr() == addr {
 				// Deletes this client by replacing the current index with the last client in the list
 				// then shortening the list by 1
-				er.clientTypeToClient[gameID][clientMetadata.cType][i] = clients[len(clients)-1]
-				er.clientTypeToClient[gameID][clientMetadata.cType] = er.clientTypeToClient[gameID][clientMetadata.cType][:len(clients)-1]
+				er.gameIDToClients[gameID][i] = clients[len(clients)-1]
+				er.gameIDToClients[gameID] = er.gameIDToClients[gameID][:len(clients)-1]
 				break
 			}
 		}
@@ -78,33 +75,49 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 	log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
+	er.handleEventRouterEvents(conn, event)
+	// Emit event to consumers
+	er.emitEvent(event)
+}
+
+func (er *EventRouter) handleEventRouterEvents(conn *websocket.Conn, event event.Event) {
+	if event.Payload.Status != "" {
+		// Only process non-acknowledgement messages
+		return
+	}
 	eventType := event.Type
 	gameID := event.GameID
-	var recipients []client.IClient
-	if eventType == "joinGame" {
+	switch eventType {
+	case "joinGame":
 		var clientType string
 		if n, ok := event.Payload.Message["clientType"].(string); ok {
 			clientType = string(n)
 		}
 		cl := client.NewClient(client.GetClientType(clientType), conn, conn.RemoteAddr())
 		er.AddClient(gameID, client.GetClientType(clientType), cl)
-		log.Debugf("Adding %s to EventRouter Clients. Clients: %v", conn.RemoteAddr(), er.clientTypeToClient[gameID])
+		// TODO: Send turn history snapshot
+		log.Debugf("Adding %s to EventRouter Clients. Clients: %v", conn.RemoteAddr(), er.gameIDToClients[gameID])
+		ackEvent := er.createAckEvent(event, "success", nil)
+		log.Debugf("Emitting joinGame ACK event")
+		er.emitEvent(ackEvent)
 	}
-	if event.Payload.Status == "" {
-		// initiator message
-		receivers := er.config.GetReceivers(eventType)
-		log.Debugf("Receivers: %v", receivers)
-		for _, r := range receivers {
-			recipients = append(recipients, er.clientTypeToClient[gameID][client.GetClientType(r)]...)
-		}
-	} else {
-		// acknowledge mesasge
-		acknowledgers := er.config.GetAcknowledgers(eventType)
-		log.Debugf("Acknowledgers: %v", acknowledgers)
-		for _, a := range acknowledgers {
-			recipients = append(recipients, er.clientTypeToClient[gameID][client.GetClientType(a)]...)
+}
+
+func (er *EventRouter) createAckEvent(event event.Event, status string, messages map[string]interface{}) event.Event {
+	event.Payload.Status = status
+	event.Payload.Message = map[string](interface{}){} // re-initialize payload
+	if messages != nil {
+		for k, v := range messages {
+			event.Payload.Message[k] = v
 		}
 	}
+	return event
+}
+
+func (er *EventRouter) emitEvent(event event.Event) {
+	gameID := event.GameID
+	recipients := er.gameIDToClients[gameID]
+	// Emit to recipients
 	for _, r := range recipients {
 		log.Debugf("Emitting to: %s", r.RemoteAddr())
 		err := r.EmitEvent(event)

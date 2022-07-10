@@ -8,8 +8,7 @@ services:
       - "8080:8080"
     env_file:
       - .envrc
-    environment:
-      - FORWARDING_RULES_PATH=/app/config/forwarding_rules.yaml
+    environment: []
     build:
       dockerfile: Dockerfile
       context: .    
