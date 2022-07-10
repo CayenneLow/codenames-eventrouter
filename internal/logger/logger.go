@@ -6,9 +6,12 @@ import (
 	logger "github.com/sirupsen/logrus"
 )
 
-func Init() {
+func Init(logLevel string) {
 	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logger.DebugLevel)
+	if lvl, err := logger.ParseLevel(logLevel); err != nil {
+		logger.Fatalf("Unable to parse log level: %s. %s", logLevel, err)
+		logger.SetLevel(lvl)
+	}
 	logger.SetFormatter(&logger.TextFormatter{
 		DisableQuote: true,
 	})

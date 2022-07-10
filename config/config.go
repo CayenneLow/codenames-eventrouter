@@ -8,16 +8,17 @@ import (
 )
 
 type Config struct {
-	WsHost string `envconfig:"WS_HOST" default:"localhost"`
-	WsPort string `envconfig:"WS_PORT" default:"8080"`
+	WsHost   string `envconfig:"WS_HOST" default:"localhost"`
+	WsPort   string `envconfig:"WS_PORT" default:"8080"`
+	LogLevel string `envconfig:"LOG_LEVEL" default:"INFO"`
 }
 
 func Init() Config {
 	var cfg Config
-	// Initialize logger
-	logger.Init()
 	// Initialize ENV
 	err := envconfig.Process("codenames-router", &cfg)
+	// Initialize logger
+	logger.Init(cfg.LogLevel)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Error initializing ENV variables"))
 	}
