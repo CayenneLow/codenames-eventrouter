@@ -11,6 +11,7 @@ type Config struct {
 	WsHost   string `envconfig:"WS_HOST" default:"localhost"`
 	WsPort   string `envconfig:"WS_PORT" default:"8080"`
 	LogLevel string `envconfig:"LOG_LEVEL" default:"INFO"`
+	DbURI    string `envconfig:"DB_URI" default:"mongodb://localhost:27017`
 }
 
 func Init() Config {

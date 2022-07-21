@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
+	"github.com/CayenneLow/codenames-eventrouter/internal/database"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
 	eventrouter "github.com/CayenneLow/codenames-eventrouter/internal/event_router"
 	"github.com/gorilla/websocket"
@@ -22,7 +23,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World")
 }
 
-func StartServer(cfg config.Config) {
+func StartServer(cfg config.Config, db database.Database) {
 	log.Info("Starting Server")
 	eventRouter := eventrouter.NewEventRouter(cfg)
 	server := Server{

@@ -2,3 +2,4 @@
 export WS_HOST="localhost"
 export WS_PORT="8080"
 export LOG_LEVEL="debug"
+export DB_URI="mongodb://localhost:27017"
