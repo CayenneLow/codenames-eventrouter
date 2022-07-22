@@ -43,7 +43,7 @@ func (suite *TestSuite) TestGet() {
 		actualEvent := events[0]
 		expected := `{
 			"type": "joinGame",
-			"_id": "T35T1",
+			"GameID": "T35T1",
 			"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 			"timestamp": 1658494936,
 			"payload": {
@@ -57,12 +57,52 @@ func (suite *TestSuite) TestGet() {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedEvent, actualEvent)
 	})
+
+	suite.T().Run("Read multiple records", func(t *testing.T) {
+		gameId := "T35T2"
+		actualEvents, err := suite.db.GetEventsByGameId(suite.ctx, gameId)
+		assert.NoError(t, err)
+		assert.Len(t, actualEvents, 2)
+		expectedEvents := make([]event.Event, 2, 2)
+		expectedEvents[0], err = event.FromJSON([]byte(`
+			{
+				"GameID": "T35T2",
+				"type": "joinGame",
+				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
+				"timestamp": 1658494936,
+				"payload": {
+					"status": "",
+					"message": {
+						"clientType": "server"
+					}
+				}
+			}
+		`))
+		assert.NoError(t, err)
+		expectedEvents[1], err = event.FromJSON([]byte(`
+			{
+				"GameID": "T35T2",
+				"type": "joinGame",
+				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa3",
+				"timestamp": 1658494937,
+				"payload": {
+					"status": "",
+					"message": {
+						"clientType": "spymaster"
+					}
+				}
+			}
+		`))
+		assert.NoError(t, err)
+		assert.Equal(t, expectedEvents[0], actualEvents[0])
+		assert.Equal(t, expectedEvents[1], actualEvents[1])
+	})
 }
 
 func (suite *TestSuite) TestInsert() {
 	json := `{
 		"type": "guess",
-		"_id": "T35T2",
+		"GameID": "INSRT",
 		"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 		"timestamp": 1658494937,
 		"payload": {
@@ -78,7 +118,7 @@ func (suite *TestSuite) TestInsert() {
 		assert.NoError(t, err)
 		err = suite.db.Insert(suite.ctx, event)
 		assert.NoError(t, err)
-		events, err := suite.db.GetEventsByGameId(suite.ctx, "T35T2")
+		events, err := suite.db.GetEventsByGameId(suite.ctx, "INSRT")
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 		assert.Equal(t, events[0], event)

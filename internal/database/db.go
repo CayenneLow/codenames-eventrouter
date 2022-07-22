@@ -43,7 +43,7 @@ func (d *database) Disconnect(ctx context.Context) error {
 }
 
 func (d *database) GetEventsByGameId(ctx context.Context, gameId string) ([]event.Event, error) {
-	cur, err := d.getCollection().Find(ctx, bson.D{primitive.E{Key: "_id", Value: gameId}})
+	cur, err := d.getCollection().Find(ctx, bson.D{primitive.E{Key: "GameID", Value: gameId}})
 	if err != nil {
 		return nil, err
 	}

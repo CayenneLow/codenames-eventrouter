@@ -13,7 +13,7 @@ type Payload struct {
 }
 
 type Event struct {
-	GameID    string  `json:"_id" bson:"_id"`
+	GameID    string  `json:"GameID" bson:"GameID"`
 	Type      string  `json:"type" bson:"type"`
 	SessionID string  `json:"sessionID" bson:"sessionID"`
 	Timestamp uint64  `json:"timestamp" bson:"timestamp"`
@@ -30,16 +30,16 @@ func FromJSON(j []byte) (Event, error) {
 
 func (e Event) JsonString() string {
 	j, err := json.MarshalIndent(e, "", "	")
-	if err == nil {
-		log.Errorf("Error converting event %v to JSON: %v", e, err)
+	if err != nil {
+		log.Errorf("Error converting event %+v to JSON: %v", e, err)
 	}
 	return string(j)
 }
 
 func (e Event) Bson() []byte {
 	b, err := bson.Marshal(e)
-	if err == nil {
-		log.Errorf("Error converting event %v to BSON: %v", e, err)
+	if err != nil {
+		log.Errorf("Error converting event %+v to BSON: %v", e, err)
 	}
 	return b
 }
