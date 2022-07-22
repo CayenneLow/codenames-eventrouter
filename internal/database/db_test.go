@@ -100,7 +100,9 @@ func (suite *TestSuite) TestGet() {
 }
 
 func (suite *TestSuite) TestInsert() {
-	json := `{
+	expectedEvents := make([]event.Event, 2, 2)
+	var err error
+	expectedEvents[0], err = event.FromJSON([]byte(`{
 		"type": "guess",
 		"GameID": "INSRT",
 		"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
@@ -112,16 +114,31 @@ func (suite *TestSuite) TestInsert() {
 				"boardCol": 1
 			}
 		}
-	}`
-	suite.T().Run("Insert event", func(t *testing.T) {
-		event, err := event.FromJSON([]byte(json))
+	}`))
+	expectedEvents[1], err = event.FromJSON([]byte(`{
+		"type": "guess",
+		"GameID": "INSRT",
+		"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa3",
+		"timestamp": 1658494938,
+		"payload": {
+			"status": "",
+			"message": {
+				"boardRow": 1,
+				"boardCol": 2
+			}
+		}
+	}`))
+	assert.NoError(suite.T(), err)
+	suite.T().Run("Insert events", func(t *testing.T) {
+		for _, event := range expectedEvents {
+			err = suite.db.Insert(suite.ctx, event)
+			assert.NoError(t, err)
+		}
+		actualEvents, err := suite.db.GetEventsByGameId(suite.ctx, "INSRT")
 		assert.NoError(t, err)
-		err = suite.db.Insert(suite.ctx, event)
-		assert.NoError(t, err)
-		events, err := suite.db.GetEventsByGameId(suite.ctx, "INSRT")
-		assert.NoError(t, err)
-		assert.Len(t, events, 1)
-		assert.Equal(t, events[0], event)
+		assert.Len(t, actualEvents, 2)
+		assert.Equal(t, actualEvents[0], expectedEvents[0])
+		assert.Equal(t, actualEvents[1], expectedEvents[1])
 	})
 }
 
