@@ -56,7 +56,7 @@ func (d *database) GetEventsByGameId(ctx context.Context, gameId string) ([]even
 }
 
 func (d *database) Insert(ctx context.Context, event event.Event) error {
-	_, err := d.getCollection().InsertOne(ctx, event.JsonString())
+	_, err := d.getCollection().InsertOne(ctx, event.Bson())
 	return err
 }
 

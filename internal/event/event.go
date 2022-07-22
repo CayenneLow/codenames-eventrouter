@@ -4,19 +4,20 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type Payload struct {
-	Status  string                 `json:"status"`
-	Message map[string]interface{} `json:"message"`
+	Status  string                 `json:"status" bson:"status"`
+	Message map[string]interface{} `json:"message" bson:"message"`
 }
 
 type Event struct {
-	GameID    string  `json:"_id"`
-	Type      string  `json:"type"`
-	SessionID string  `json:"sessionID"`
-	Timestamp uint64  `json:"timestamp"`
-	Payload   Payload `json:"payload"`
+	GameID    string  `json:"_id" bson:"_id"`
+	Type      string  `json:"type" bson:"type"`
+	SessionID string  `json:"sessionID" bson:"sessionID"`
+	Timestamp uint64  `json:"timestamp" bson:"timestamp"`
+	Payload   Payload `json:"payload" bson:"payload"`
 }
 
 func FromJSON(j []byte) (Event, error) {
@@ -30,7 +31,15 @@ func FromJSON(j []byte) (Event, error) {
 func (e Event) JsonString() string {
 	j, err := json.MarshalIndent(e, "", "	")
 	if err == nil {
-		log.Errorf("Error converting event %v to String: %v", e, err)
+		log.Errorf("Error converting event %v to JSON: %v", e, err)
 	}
 	return string(j)
+}
+
+func (e Event) Bson() []byte {
+	b, err := bson.Marshal(e)
+	if err == nil {
+		log.Errorf("Error converting event %v to BSON: %v", e, err)
+	}
+	return b
 }
