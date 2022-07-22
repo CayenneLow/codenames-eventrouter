@@ -13,7 +13,7 @@ func TestFromJson(t *testing.T) {
 	t.Run("Test initiator", func(t *testing.T) {
 		eventJson := `{
 			"type": "guess",
-			"gameID": "test",
+			"_id": "test",
 			"timestamp": 111111,
 			"payload": {
 				"status": "",

@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   eventrouter:
-    container_name: event_router_server
+    container_name: eventrouter
     command: "./bin/start_event_router"
     ports:
       - "8080:8080"
@@ -15,9 +15,11 @@ services:
     restart: always
 
   mongo:
+    container_name: mongo
     image: mongo
     restart: always
     environment:
+      MONGO_INITDB_DATABASE: event_store
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
 
@@ -25,7 +27,7 @@ services:
     image: mongo-express
     restart: always
     ports:
-      - 8081:8081
+      - "8081:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: example

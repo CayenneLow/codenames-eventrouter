@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  event_router_integration_test:
+    container_name: event_router_integration_test
+    command: "go test -timeout 10s -v -cover ./..."
+    ports:
+      - "8888:8080"
+    env_file:
+      - .envrc
+    environment:
+      DB_NAME: "test"
+      DB_COLLECTION: "test"
+      DB_URI: "mongodb://root:example@mongo:27017/"
+      WS_HOST: "eventrouter"
+      WS_PORT: "8080"
+    build:
+      dockerfile: Dockerfile
+      context: .    
+    restart: "no"
+    depends_on:
+      - mongo
+      - eventrouter
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: test
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./internal/database/init_db_test_data.js:/docker-entrypoint-initdb.d/init_db_test_data.js:ro
+  
+  mongo-express:
+    image: mongo-express
+    depends_on:
+      - mongo
+    restart: always
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/

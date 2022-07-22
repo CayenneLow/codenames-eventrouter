@@ -12,8 +12,8 @@ type Payload struct {
 }
 
 type Event struct {
+	GameID    string  `json:"_id"`
 	Type      string  `json:"type"`
-	GameID    string  `json:"gameID"`
 	SessionID string  `json:"sessionID"`
 	Timestamp uint64  `json:"timestamp"`
 	Payload   Payload `json:"payload"`
@@ -27,7 +27,7 @@ func FromJSON(j []byte) (Event, error) {
 	return event, nil
 }
 
-func (e Event) String() string {
+func (e Event) JsonString() string {
 	j, err := json.MarshalIndent(e, "", "	")
 	if err == nil {
 		log.Errorf("Error converting event %v to String: %v", e, err)
