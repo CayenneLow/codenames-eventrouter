@@ -18,3 +18,6 @@ test_all:
 test_all_debug:
 	# Error codes: Success (0), Failure (1)
 	docker compose -f docker-compose.yml -f docker-compose.tests.yml up event_router_integration_test mongo-express -d --build
+
+docker_down:
+	docker compose -f docker-compose.yml -f docker-compose.tests.yml down
