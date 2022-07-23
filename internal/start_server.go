@@ -56,6 +56,7 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 			log.Error(err)
 			break
 		}
+		log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, c.RemoteAddr(), event.GameID)
 		s.eventRouter.HandleEvent(c, event)
 	}
 	// Remove from event router

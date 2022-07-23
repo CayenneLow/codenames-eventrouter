@@ -4,9 +4,11 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
+	"github.com/CayenneLow/codenames-eventrouter/internal/database"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -119,4 +121,27 @@ func TestRemoveClient(t *testing.T) {
 		err := eventRouter.RemoveClient(remote)
 		assert.Error(t, err)
 	})
+}
+
+func TestEventAddedToDB(t *testing.T) {
+	cfg := config.Init()
+	db := database.Init(context.Background(), cfg)
+	eventRouter := NewEventRouter(cfg, db)
+	e := event.Event{
+		GameID:    "INTT3",
+		Type:      "startGame",
+		SessionID: "ec6345a4-9618-4970-a720-2ac2dfe2715f",
+		Timestamp: 1658581681,
+		Payload: event.Payload{
+			Status:  "",
+			Message: map[string]interface{}{},
+		},
+	}
+	eventRouter.HandleEvent(&websocket.Conn{}, e)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	events, err := db.GetEventsByGameId(ctx, "INTT3")
+	assert.NoError(t, err)
+	assert.Len(t, events, 1)
+	assert.Equal(t, e, events[0])
 }
