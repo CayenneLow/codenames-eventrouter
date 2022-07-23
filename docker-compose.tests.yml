@@ -1,17 +1,37 @@
 version: "3.9"
 
 services:
+  eventrouter:
+    container_name: eventrouter
+    command: "./bin/start_event_router"
+    env_file:
+      - .envrc
+    environment: []
+    build:
+      dockerfile: Dockerfile
+      context: .    
+    restart: always
+    depends_on:
+      - redis
+    networks:
+      - tests
+
+  redis:
+    image: redis:7.0.4-alpine
+    restart: always
+    volumes: 
+      - test-db-data:/data
+    networks:
+      - tests
+
   event_router_integration_test:
     container_name: event_router_integration_test
     command: "go test -timeout 10s -v -cover ./..."
-    ports:
-      - "8888:8080"
     env_file:
       - .envrc
     environment:
-      DB_NAME: "test"
-      DB_COLLECTION: "test"
-      DB_URI: "mongodb://root:example@mongo:27017/"
+      DB_NAME: "codenames"
+      DB_URI: "redis:6379"
       WS_HOST: "eventrouter"
       WS_PORT: "8080"
     build:
@@ -19,30 +39,31 @@ services:
       context: .    
     restart: "no"
     depends_on:
-      - mongo
+      - redis
       - eventrouter
-  mongo:
-    container_name: mongo
-    image: mongo
-    restart: always
-    ports:
-      - "27018:27017"
-    environment:
-      MONGO_INITDB_DATABASE: test
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-    volumes:
-      - ./internal/database/init_db_test_data.js:/docker-entrypoint-initdb.d/init_db_test_data.js:ro
-  
-  mongo-express:
-    image: mongo-express
+    networks:
+      - tests
+
+  init-redis:
     depends_on:
-      - mongo
+      - redis
+    image: redis:7.0.4-alpine
+    restart: "no"
+    volumes: 
+      - ./internal/database/init_test/:/init_test/:ro
+    command: sh -c "cat /init_test/test_data.txt | redis-cli -h redis -p 6379 --pipe"
+    networks:
+      - tests
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
     restart: always
     ports:
-      - "8082:8081"
-    environment:
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      - "8002:8001"
+
+
+networks:
+  tests:
+
+volumes:
+  test-db-data:

@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/go-redis/redis/v9 v9.0.0-beta.1
 	go.mongodb.org/mongo-driver v1.9.1
 	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
 )

@@ -1,6 +1,7 @@
 package eventrouter
 
 import (
+	"context"
 	"net"
 	"testing"
 
@@ -39,11 +40,20 @@ func (m MockHost) CType() client.ClientType { return client.Server }
 func (m MockHost) WS() *websocket.Conn      { return &websocket.Conn{} }
 func (m MockHost) RemoteAddr() net.Addr     { return m.remote }
 
+type MockDB struct {
+}
+
+func (m *MockDB) Disconnect(ctx context.Context) error { return nil }
+func (m *MockDB) GetEventsByGameId(ctx context.Context, gameId string) ([]event.Event, error) {
+	return []event.Event{}, nil
+}
+func (m *MockDB) Insert(ctx context.Context, event event.Event) error { return nil }
+
 func TestAddClient(t *testing.T) {
 	cfg := config.Init()
 	t.Run("Test add client with no conflict", func(t *testing.T) {
 		gameID := "T35T1"
-		eventRouter := NewEventRouter(cfg)
+		eventRouter := NewEventRouter(cfg, &MockDB{})
 		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		mockClientMetadata := ClientMetadata{cType: client.Host, gameIDs: []string{gameID}}
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
@@ -55,7 +65,7 @@ func TestAddClient(t *testing.T) {
 
 	t.Run("Test appending client", func(t *testing.T) {
 		gameID := "T35T1"
-		eventRouter := NewEventRouter(cfg)
+		eventRouter := NewEventRouter(cfg, &MockDB{})
 		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		mockClientMetadata1 := ClientMetadata{cType: client.Host, gameIDs: []string{gameID}}
 		mockHost2 := MockHost{remote: &net.IPAddr{IP: net.IPv4(2, 2, 2, 2)}}
@@ -73,7 +83,7 @@ func TestAddClient(t *testing.T) {
 
 	t.Run("Test adding different types of clients", func(t *testing.T) {
 		gameID := "T35T1"
-		eventRouter := NewEventRouter(cfg)
+		eventRouter := NewEventRouter(cfg, &MockDB{})
 		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		mockClientMetadata1 := ClientMetadata{cType: client.Host, gameIDs: []string{gameID}}
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
@@ -94,7 +104,7 @@ func TestRemoveClient(t *testing.T) {
 	cfg := config.Init()
 	gameID := "T35T1"
 	t.Run("Test removing existing client", func(t *testing.T) {
-		eventRouter := NewEventRouter(cfg)
+		eventRouter := NewEventRouter(cfg, &MockDB{})
 		mockHost := MockHost{remote: &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}}
 		eventRouter.AddClient(gameID, client.Host, &mockHost)
 		err := eventRouter.RemoveClient(mockHost.RemoteAddr())
@@ -104,7 +114,7 @@ func TestRemoveClient(t *testing.T) {
 	})
 
 	t.Run("Test removing non-existing client", func(t *testing.T) {
-		eventRouter := NewEventRouter(cfg)
+		eventRouter := NewEventRouter(cfg, &MockDB{})
 		remote := &net.IPAddr{IP: net.IPv4(1, 1, 1, 1)}
 		err := eventRouter.RemoveClient(remote)
 		assert.Error(t, err)

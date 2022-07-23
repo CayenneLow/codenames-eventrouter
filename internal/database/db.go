@@ -5,11 +5,7 @@ import (
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
-	log "github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	redis "github.com/go-redis/redis/v9"
 )
 
 type Database interface {
@@ -19,47 +15,48 @@ type Database interface {
 }
 
 type database struct {
-	dbClient     *mongo.Client
+	dbClient     *redis.Client
 	dbName       string
 	dbCollection string
 }
 
 func Init(ctx context.Context, cfg config.Config) Database {
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.DbURI))
-	if err != nil {
-		log.Fatalf("Unable to connect to DB: %s", err)
-	}
+	client := redis.NewClient(&redis.Options{
+		Addr:     cfg.DbURI,
+		Password: "",
+		DB:       0,
+	})
+
 	db := database{
-		dbClient:     client,
-		dbName:       cfg.DbName,
-		dbCollection: cfg.DbCollection,
+		dbClient: client,
 	}
 
 	return &db
 }
 
 func (d *database) Disconnect(ctx context.Context) error {
-	return d.dbClient.Disconnect(ctx)
+	return d.dbClient.Close()
 }
 
 func (d *database) GetEventsByGameId(ctx context.Context, gameId string) ([]event.Event, error) {
-	cur, err := d.getCollection().Find(ctx, bson.D{primitive.E{Key: "GameID", Value: gameId}})
+	events := make([]event.Event, 0, 10)
+	rawEvents, err := d.dbClient.LRange(ctx, gameId, 0, -1).Result()
 	if err != nil {
-		return nil, err
+		return []event.Event{}, err
 	}
-	events := []event.Event{}
-	err = cur.All(ctx, &events)
-	if err != nil {
-		return nil, err
+
+	for _, raw := range rawEvents {
+		e, err := event.FromJSON([]byte(raw))
+		if err != nil {
+			return []event.Event{}, err
+		}
+		events = append(events, e)
 	}
+
 	return events, nil
 }
 
 func (d *database) Insert(ctx context.Context, event event.Event) error {
-	_, err := d.getCollection().InsertOne(ctx, event.Bson())
+	_, err := d.dbClient.RPush(ctx, event.GameID, event.JsonString()).Result()
 	return err
-}
-
-func (d *database) getCollection() *mongo.Collection {
-	return d.dbClient.Database(d.dbName).Collection(d.dbCollection)
 }
