@@ -25,7 +25,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func StartServer(cfg config.Config, db database.Database) {
 	log.Info("Starting Server")
-	eventRouter := eventrouter.NewEventRouter(cfg)
+	eventRouter := eventrouter.NewEventRouter(cfg, db)
 	server := Server{
 		config:      cfg,
 		eventRouter: eventRouter,

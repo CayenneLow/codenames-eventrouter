@@ -1,11 +1,14 @@
 package eventrouter
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
+	"github.com/CayenneLow/codenames-eventrouter/internal/database"
 	"github.com/CayenneLow/codenames-eventrouter/internal/event"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -21,13 +24,15 @@ type EventRouter struct {
 	config               config.Config
 	gameIDToClients      map[string]([]client.IClient) // gameID -> []Clients
 	addrToClientMetadata map[net.Addr](ClientMetadata)
+	db                   database.Database
 }
 
-func NewEventRouter(config config.Config) EventRouter {
+func NewEventRouter(config config.Config, db database.Database) EventRouter {
 	eventRouter := EventRouter{
 		config:               config,
 		gameIDToClients:      map[string][]client.IClient{},
 		addrToClientMetadata: map[net.Addr]ClientMetadata{},
+		db:                   db,
 	}
 	return eventRouter
 }
@@ -75,7 +80,19 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 	log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
+	fmt.Printf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
 	er.handleEventRouterEvents(conn, event)
+	// Save event to DB
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := er.db.Insert(ctx, event)
+	if err != nil {
+		// TODO: Push err to dead letter queue
+		log.Error("Error inserting event to db", log.Fields{
+			"error": err,
+			"event": event,
+		})
+	}
 	// Emit event to consumers
 	er.emitEvent(event)
 }
