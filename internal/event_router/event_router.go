@@ -38,6 +38,11 @@ func NewEventRouter(config config.Config, db database.Database) EventRouter {
 }
 
 func (er *EventRouter) AddClient(gameID string, clientType client.ClientType, cl client.IClient) {
+	log.Debug("Adding Client to Game", log.Fields{
+		"gameID":     gameID,
+		"clientType": clientType,
+		"IP":         cl.RemoteAddr(),
+	})
 	if _, ok := er.gameIDToClients[gameID]; !ok {
 		// Initialize
 		er.gameIDToClients[gameID] = []client.IClient{}

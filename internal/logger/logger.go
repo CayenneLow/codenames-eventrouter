@@ -8,14 +8,15 @@ import (
 
 func Init(logLevel string) {
 	logger.SetOutput(os.Stdout)
-	if lvl, err := logger.ParseLevel(logLevel); err != nil {
+	lvl, err := logger.ParseLevel(logLevel)
+	if err != nil {
 		logger.Fatalf("Unable to parse log level: %s. %s", logLevel, err)
-		logger.SetLevel(lvl)
 	}
+	logger.SetLevel(lvl)
 	logger.SetFormatter(&logger.TextFormatter{
 		DisableQuote: true,
 	})
-	logger.Info("Logger Initialized")
+	logger.Infof("Logger Initialized with log level:%s", logger.GetLevel())
 }
 
 func Debug(args ...interface{}) {
