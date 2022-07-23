@@ -23,6 +23,7 @@ services:
     restart: always
     volumes: 
       - db-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
 
   redis-insight:
     image: redislabs/redisinsight:latest
