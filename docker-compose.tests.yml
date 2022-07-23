@@ -60,6 +60,8 @@ services:
     restart: always
     ports:
       - "8002:8001"
+    networks:
+      - tests
 
 
 networks:

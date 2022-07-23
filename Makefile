@@ -15,7 +15,7 @@ test_all: reset_tests
 	docker compose -f docker-compose.tests.yml up init-redis
 	docker compose -f docker-compose.tests.yml up event_router_integration_test --build --exit-code-from event_router_integration_test
 
-test_all_debug:
+test_all_debug: reset_tests
 	# Error codes: Success (0), Failure (1)
 	docker compose -f docker-compose.tests.yml up event_router_integration_test redis-insight init-redis -d --build
 

@@ -80,10 +80,9 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
 	log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
-	fmt.Printf("Received event: %s from client: %v for Game: %s", event.Type, conn.RemoteAddr(), event.GameID)
 	er.handleEventRouterEvents(conn, event)
 	// Save event to DB
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := er.db.Insert(ctx, event)
 	if err != nil {

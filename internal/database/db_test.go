@@ -36,14 +36,14 @@ func (suite *TestSuite) TestGet() {
 	})
 
 	suite.T().Run("Read existing record", func(t *testing.T) {
-		gameId := "T35T1"
+		gameId := "INTT1"
 		events, err := suite.db.GetEventsByGameId(suite.ctx, gameId)
 		assert.NoError(t, err)
 		assert.Len(t, events, 1)
 		actualEvent := events[0]
 		expected := `{
 			"type": "joinGame",
-			"GameID": "T35T1",
+			"GameID": "INTT1",
 			"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 			"timestamp": 1658494936,
 			"payload": {
@@ -59,14 +59,14 @@ func (suite *TestSuite) TestGet() {
 	})
 
 	suite.T().Run("Read multiple records", func(t *testing.T) {
-		gameId := "T35T2"
+		gameId := "INTT2"
 		actualEvents, err := suite.db.GetEventsByGameId(suite.ctx, gameId)
 		assert.NoError(t, err)
 		assert.Len(t, actualEvents, 2)
 		expectedEvents := make([]event.Event, 2, 2)
 		expectedEvents[0], err = event.FromJSON([]byte(`
 			{
-				"GameID": "T35T2",
+				"GameID": "INTT2",
 				"type": "joinGame",
 				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 				"timestamp": 1658494936,
@@ -81,7 +81,7 @@ func (suite *TestSuite) TestGet() {
 		assert.NoError(t, err)
 		expectedEvents[1], err = event.FromJSON([]byte(`
 			{
-				"GameID": "T35T2",
+				"GameID": "INTT2",
 				"type": "joinGame",
 				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa3",
 				"timestamp": 1658494937,
