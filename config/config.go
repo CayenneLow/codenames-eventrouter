@@ -18,7 +18,7 @@ type Config struct {
 func Init() Config {
 	var cfg Config
 	// Initialize ENV
-	err := envconfig.Process("codenames-router", &cfg)
+	err := envconfig.Process("", &cfg)
 	// Initialize logger
 	logger.Init(cfg.LogLevel)
 	if err != nil {
