@@ -19,8 +19,6 @@ services:
   redis:
     image: redis:7.0.4-alpine
     restart: always
-    volumes: 
-      - test-db-data:/data
     networks:
       - tests
 
