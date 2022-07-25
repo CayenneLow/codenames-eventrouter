@@ -146,10 +146,3 @@ func (er *EventRouter) emitEvent(event event.Event) {
 		}
 	}
 }
-
-// TODO: Remove, router should not be creating new game
-// func newGameId() string {
-// 	newUuid := uuid.NewString()
-// 	gameID := strings.ToUpper(newUuid[:5])
-// 	return gameID
-// }

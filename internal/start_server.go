@@ -39,6 +39,7 @@ func StartServer(cfg config.Config, db database.Database) {
 }
 
 func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
+	log.Debugf("Received connection: %s", r.RemoteAddr)
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error(err, "Unable to upgrade to websocket")
