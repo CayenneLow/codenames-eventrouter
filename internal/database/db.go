@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
-	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/CayenneLow/codenames-eventrouter/pkg/event"
 	redis "github.com/go-redis/redis/v9"
 )
 
