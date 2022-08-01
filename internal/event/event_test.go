@@ -12,27 +12,27 @@ type Message struct {
 func TestFromJson(t *testing.T) {
 	t.Run("Test initiator", func(t *testing.T) {
 		eventJson := `{
-			"type": "guess",
-			"GameID": "test",
-			"timestamp": 111111,
-			"payload": {
-				"status": "",
-				"message": {
-					"boardRow": 4,
-					"boardCol": 3
+				"type": "joinGame",
+				"gameID": "D3840",
+				"sessionID": "b344328f-e0d9-4692-a4dd-ed0d30e3a565",
+				"timestamp": 1659362047,
+				"payload": {
+					"status": "",
+					"message": {
+						"clientType": "server"
+					}
 				}
-			}
-		}`
+			}`
 
 		expected := Event{
-			Type:      "guess",
-			GameID:    "test",
-			Timestamp: 111111,
+			Type:      "joinGame",
+			GameID:    "D3840",
+			SessionID: "b344328f-e0d9-4692-a4dd-ed0d30e3a565",
+			Timestamp: 1659362047,
 			Payload: Payload{
 				Status: "",
 				Message: map[string](interface{}){
-					"boardRow": float64(4),
-					"boardCol": float64(3),
+					"clientType": "server",
 				},
 			},
 		}

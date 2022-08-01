@@ -43,7 +43,7 @@ func (suite *TestSuite) TestGet() {
 		actualEvent := events[0]
 		expected := `{
 			"type": "joinGame",
-			"GameID": "INTT1",
+			"gameID": "INTT1",
 			"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 			"timestamp": 1658494936,
 			"payload": {
@@ -66,7 +66,7 @@ func (suite *TestSuite) TestGet() {
 		expectedEvents := make([]event.Event, 2, 2)
 		expectedEvents[0], err = event.FromJSON([]byte(`
 			{
-				"GameID": "INTT2",
+				"gameID": "INTT2",
 				"type": "joinGame",
 				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 				"timestamp": 1658494936,
@@ -81,7 +81,7 @@ func (suite *TestSuite) TestGet() {
 		assert.NoError(t, err)
 		expectedEvents[1], err = event.FromJSON([]byte(`
 			{
-				"GameID": "INTT2",
+				"gameID": "INTT2",
 				"type": "joinGame",
 				"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa3",
 				"timestamp": 1658494937,
@@ -104,7 +104,7 @@ func (suite *TestSuite) TestInsert() {
 	var err error
 	expectedEvents[0], err = event.FromJSON([]byte(`{
 		"type": "guess",
-		"GameID": "INSRT",
+		"gameID": "INSRT",
 		"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa2",
 		"timestamp": 1658494937,
 		"payload": {
@@ -117,7 +117,7 @@ func (suite *TestSuite) TestInsert() {
 	}`))
 	expectedEvents[1], err = event.FromJSON([]byte(`{
 		"type": "guess",
-		"GameID": "INSRT",
+		"gameID": "INSRT",
 		"sessionID": "18c7c74a-317f-46d5-aac8-34a629d82fa3",
 		"timestamp": 1658494938,
 		"payload": {

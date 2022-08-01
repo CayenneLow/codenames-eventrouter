@@ -13,7 +13,7 @@ type Payload struct {
 }
 
 type Event struct {
-	GameID    string  `json:"GameID" bson:"GameID"`
+	GameID    string  `json:"gameID" bson:"gameID"`
 	Type      string  `json:"type" bson:"type"`
 	SessionID string  `json:"sessionID" bson:"sessionID"`
 	Timestamp uint64  `json:"timestamp" bson:"timestamp"`
