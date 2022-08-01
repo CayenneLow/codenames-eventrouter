@@ -14,14 +14,11 @@ build:
 test_all: 
 	docker compose -f docker-compose.tests.yml up init-redis
 	docker compose -f docker-compose.tests.yml up event_router_integration_test --build --exit-code-from event_router_integration_test
+	docker compose -f docker-compose.tests.yml down
 
 # Error codes: Success (0), Failure (1)
 test_all_debug: 
-	docker compose -f docker-compose.tests.yml up event_router_integration_test redis-insight init-redis -d --build
-
-reset_tests:
-	-docker compose -f docker-compose.tests.yml down
-	-docker volume rm codenames-eventrouter_test-db-data
+	docker compose -f docker-compose.tests.yml up event_router_integration_test redis-insight-it init-redis -d --build
 
 docker_down:
 	docker compose -f docker-compose.yml -f docker-compose.tests.yml down
