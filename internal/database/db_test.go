@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
-	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/CayenneLow/codenames-eventrouter/pkg/event"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )

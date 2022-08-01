@@ -8,7 +8,7 @@ import (
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
-	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/CayenneLow/codenames-eventrouter/pkg/event"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"

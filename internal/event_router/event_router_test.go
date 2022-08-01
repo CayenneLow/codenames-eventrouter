@@ -9,7 +9,7 @@ import (
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/client"
 	"github.com/CayenneLow/codenames-eventrouter/internal/database"
-	"github.com/CayenneLow/codenames-eventrouter/internal/event"
+	"github.com/CayenneLow/codenames-eventrouter/pkg/event"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 )

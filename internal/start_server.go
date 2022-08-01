@@ -6,8 +6,8 @@ import (
 
 	"github.com/CayenneLow/codenames-eventrouter/config"
 	"github.com/CayenneLow/codenames-eventrouter/internal/database"
-	"github.com/CayenneLow/codenames-eventrouter/internal/event"
-	eventrouter "github.com/CayenneLow/codenames-eventrouter/internal/event_router"
+	"github.com/CayenneLow/codenames-eventrouter/pkg/event"
+	eventrouter "github.com/CayenneLow/codenames-eventrouter/pkg/event_router"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
