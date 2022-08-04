@@ -115,9 +115,22 @@ func (er *EventRouter) handleEventRouterEvents(conn *websocket.Conn, event event
 		}
 		cl := client.NewClient(client.GetClientType(clientType), conn, conn.RemoteAddr())
 		er.AddClient(gameID, client.GetClientType(clientType), cl)
-		// TODO: Send turn history snapshot
 		log.Debugf("Adding %s to EventRouter Clients. Clients: %v", conn.RemoteAddr(), er.gameIDToClients[gameID])
-		ackEvent := er.createAckEvent(event, "success", nil)
+		// Send ACK that includes events
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		events, err := er.db.GetEventsByGameId(ctx, gameID)
+		if err != nil {
+			log.Error("Error fetching events by game id", log.Fields{
+				"gameID": gameID,
+				"error":  err,
+			})
+		}
+		log.Debug("Fetched events", log.Fields{
+			"gameID": gameID,
+			"events": events,
+		})
+		ackEvent := er.createAckEvent(event, "success", map[string]interface{}{"events": events})
 		log.Debugf("Emitting joinGame ACK event")
 		er.emitEvent(ackEvent)
 	}
@@ -126,10 +139,8 @@ func (er *EventRouter) handleEventRouterEvents(conn *websocket.Conn, event event
 func (er *EventRouter) createAckEvent(event event.Event, status string, messages map[string]interface{}) event.Event {
 	event.Payload.Status = status
 	event.Payload.Message = map[string](interface{}){} // re-initialize payload
-	if messages != nil {
-		for k, v := range messages {
-			event.Payload.Message[k] = v
-		}
+	for k, v := range messages {
+		event.Payload.Message[k] = v
 	}
 	return event
 }

@@ -8,6 +8,7 @@ import (
 
 func Init(logLevel string) {
 	logger.SetOutput(os.Stdout)
+	logger.SetFormatter(&logger.JSONFormatter{})
 	lvl, err := logger.ParseLevel(logLevel)
 	if err != nil {
 		logger.Fatalf("Unable to parse log level: %s. %s", logLevel, err)
