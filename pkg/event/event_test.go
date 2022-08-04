@@ -6,20 +6,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Message struct {
-}
-
 func TestFromJson(t *testing.T) {
-	t.Run("Test initiator", func(t *testing.T) {
+	t.Run("Test conversion", func(t *testing.T) {
 		eventJson := `{
 				"type": "joinGame",
 				"gameID": "D3840",
 				"sessionID": "b344328f-e0d9-4692-a4dd-ed0d30e3a565",
 				"timestamp": 1659362047,
 				"payload": {
-					"status": "",
+					"status": "success",
 					"message": {
-						"clientType": "server"
+						"events": [
+							{	
+								"type": "joinGame",
+								"gameID": "D3840",
+								"sessionID": "b344328f-e0d9-4692-a4dd-ed0d30e3a566",
+								"timestamp": 1659362046,
+								"payload": {
+									"status": "",
+									"message": {
+										"clientType": "server"
+									}
+								}
+							}	
+						]
 					}
 				}
 			}`
@@ -30,9 +40,22 @@ func TestFromJson(t *testing.T) {
 			SessionID: "b344328f-e0d9-4692-a4dd-ed0d30e3a565",
 			Timestamp: 1659362047,
 			Payload: Payload{
-				Status: "",
-				Message: map[string](interface{}){
-					"clientType": "server",
+				Status: "success",
+				Message: map[string]interface{}{
+					"events": []Event{
+						{
+							GameID:    "D3840",
+							Type:      "joinGame",
+							SessionID: "b344328f-e0d9-4692-a4dd-ed0d30e3a566",
+							Timestamp: 1659362046,
+							Payload: Payload{
+								Status: "",
+								Message: map[string]interface{}{
+									"clientType": "server",
+								},
+							},
+						},
+					},
 				},
 			},
 		}

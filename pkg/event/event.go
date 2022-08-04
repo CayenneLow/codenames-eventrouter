@@ -2,7 +2,6 @@ package event
 
 import (
 	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -24,6 +23,28 @@ func FromJSON(j []byte) (Event, error) {
 	var event Event
 	if err := json.Unmarshal(j, &event); err != nil {
 		return event, err
+	}
+	// Unmarshal events if provided
+	var nestedEvents []Event
+	if _, ok := event.Payload.Message["events"]; ok {
+		log.Debug("HERE")
+		if es, ok := event.Payload.Message["events"].([]interface{}); ok {
+			log.Debug("HERE2")
+			for _, e := range es {
+				// This is currently an interface{}, need to marshal into a []byte first
+				// before we can convert this into an Event
+				eM, err := json.Marshal(e)
+				if err != nil {
+					return Event{}, nil
+				}
+				var nestedEvent Event
+				if err = json.Unmarshal(eM, &nestedEvent); err != nil {
+					return Event{}, nil
+				}
+				nestedEvents = append(nestedEvents, nestedEvent)
+			}
+			event.Payload.Message["events"] = nestedEvents
+		}
 	}
 	return event, nil
 }

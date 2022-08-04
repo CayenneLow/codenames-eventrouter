@@ -19,10 +19,6 @@ type Server struct {
 	eventRouter eventrouter.EventRouter
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello World")
-}
-
 func StartServer(cfg config.Config, db database.Database) {
 	log.Info("Starting Server")
 	eventRouter := eventrouter.NewEventRouter(cfg, db)
@@ -31,7 +27,6 @@ func StartServer(cfg config.Config, db database.Database) {
 		eventRouter: eventRouter,
 	}
 
-	http.HandleFunc("/", hello)
 	http.HandleFunc("/ws", server.ws)
 	wsEndpoint := fmt.Sprintf(":%s", cfg.WsPort)
 	log.Infof("Listening on: %s", wsEndpoint)
@@ -47,18 +42,20 @@ func (s *Server) ws(w http.ResponseWriter, r *http.Request) {
 	defer c.Close()
 	for {
 		_, message, err := c.ReadMessage()
-		log.Debugf("Received message: %s", message)
+		log.WithFields(log.Fields{
+			"message": string(message),
+		}).Debug("Received Message")
 		if err != nil {
 			log.Error(err)
 			break
 		}
-		event, err := event.FromJSON(message)
+		e, err := event.FromJSON(message)
 		if err != nil {
 			log.Error(err)
 			break
 		}
-		log.Debugf("Received event: %s from client: %v for Game: %s", event.Type, c.RemoteAddr(), event.GameID)
-		s.eventRouter.HandleEvent(c, event)
+		log.Debugf("Received event: %s from client: %v for Game: %s", e.Type, c.RemoteAddr(), e.GameID)
+		s.eventRouter.HandleEvent(c, e)
 	}
 	// Remove from event router
 	s.eventRouter.RemoveClient(c.RemoteAddr())
