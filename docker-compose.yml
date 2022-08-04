@@ -19,6 +19,7 @@ services:
       - redis
 
   redis:
+    container_name: redis
     image: redis:7.0.4-alpine
     restart: always
     ports:

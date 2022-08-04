@@ -22,3 +22,5 @@ go.work
 
 .envrc
 bin/
+.DS_STORE
+.idea
