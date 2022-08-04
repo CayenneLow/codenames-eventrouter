@@ -38,11 +38,11 @@ func NewEventRouter(config config.Config, db database.Database) EventRouter {
 }
 
 func (er *EventRouter) AddClient(gameID string, clientType client.ClientType, cl client.IClient) {
-	log.Debug("Adding Client to Game", log.Fields{
+	log.WithFields(log.Fields{
 		"gameID":     gameID,
 		"clientType": clientType,
 		"IP":         cl.RemoteAddr(),
-	})
+	}).Debug("Adding client to game")
 	if _, ok := er.gameIDToClients[gameID]; !ok {
 		// Initialize
 		er.gameIDToClients[gameID] = []client.IClient{}
@@ -69,9 +69,9 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 	delete(er.addrToClientMetadata, addr)
 	for _, gameID := range clientMetadata.gameIDs {
 		clients := er.gameIDToClients[gameID]
-		for i, client := range clients {
+		for i, cl := range clients {
 			// Find client to delete
-			if client.RemoteAddr() == addr {
+			if cl.RemoteAddr() == addr {
 				// Deletes this client by replacing the current index with the last client in the list
 				// then shortening the list by 1
 				er.gameIDToClients[gameID][i] = clients[len(clients)-1]
@@ -84,11 +84,11 @@ func (er *EventRouter) RemoveClient(addr net.Addr) error {
 }
 
 func (er *EventRouter) HandleEvent(conn *websocket.Conn, event event.Event) {
-	er.handleEventRouterEvents(conn, event)
 	// Save event to DB
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := er.db.Insert(ctx, event)
+	er.handleEventRouterEvents(conn, event)
 	if err != nil {
 		// TODO: Push err to dead letter queue
 		log.Error("Error inserting event to db", log.Fields{
@@ -115,9 +115,23 @@ func (er *EventRouter) handleEventRouterEvents(conn *websocket.Conn, event event
 		}
 		cl := client.NewClient(client.GetClientType(clientType), conn, conn.RemoteAddr())
 		er.AddClient(gameID, client.GetClientType(clientType), cl)
-		// TODO: Send turn history snapshot
 		log.Debugf("Adding %s to EventRouter Clients. Clients: %v", conn.RemoteAddr(), er.gameIDToClients[gameID])
-		ackEvent := er.createAckEvent(event, "success", nil)
+		// Send ACK that includes events
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		events, err := er.db.GetEventsByGameId(ctx, gameID)
+		if err != nil {
+			log.Error("Error fetching events by game id", log.Fields{
+				"gameID": gameID,
+				"error":  err,
+			})
+		}
+		log.WithFields(log.Fields{
+			"gameID": gameID,
+			"events": events,
+		}).Debug("Fetched events")
+		// Emit
+		ackEvent := er.createAckEvent(event, "success", map[string]interface{}{"events": events})
 		log.Debugf("Emitting joinGame ACK event")
 		er.emitEvent(ackEvent)
 	}
@@ -126,10 +140,8 @@ func (er *EventRouter) handleEventRouterEvents(conn *websocket.Conn, event event
 func (er *EventRouter) createAckEvent(event event.Event, status string, messages map[string]interface{}) event.Event {
 	event.Payload.Status = status
 	event.Payload.Message = map[string](interface{}){} // re-initialize payload
-	if messages != nil {
-		for k, v := range messages {
-			event.Payload.Message[k] = v
-		}
+	for k, v := range messages {
+		event.Payload.Message[k] = v
 	}
 	return event
 }

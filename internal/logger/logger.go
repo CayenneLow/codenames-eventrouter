@@ -1,21 +1,26 @@
 package logger
 
 import (
-	"os"
-
 	logger "github.com/sirupsen/logrus"
+	"os"
 )
 
 func Init(logLevel string) {
 	logger.SetOutput(os.Stdout)
+	logger.SetFormatter(&logger.JSONFormatter{
+		TimestampFormat:   "2006-01-02T15:04:05Z07:00",
+		DisableTimestamp:  false,
+		DisableHTMLEscape: false,
+		DataKey:           "",
+		FieldMap:          nil,
+		CallerPrettyfier:  nil,
+		PrettyPrint:       true,
+	})
 	lvl, err := logger.ParseLevel(logLevel)
 	if err != nil {
 		logger.Fatalf("Unable to parse log level: %s. %s", logLevel, err)
 	}
 	logger.SetLevel(lvl)
-	logger.SetFormatter(&logger.TextFormatter{
-		DisableQuote: true,
-	})
 	logger.Infof("Logger Initialized with log level:%s", logger.GetLevel())
 }
 

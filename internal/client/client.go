@@ -73,7 +73,9 @@ func (c Client) EmitEvent(event event.Event) error {
 	if err != nil {
 		return errors.Wrap(err, "Error marshalling event")
 	}
-	log.Debugf("Emitting event: %s", eventJson)
+	log.WithFields(log.Fields{
+		"events": string(eventJson),
+	}).Debug("Emitting event")
 	if err := c.ws.WriteMessage(websocket.TextMessage, eventJson); err != nil {
 		return errors.Wrap(err, "Error writing message to websocket")
 	}
